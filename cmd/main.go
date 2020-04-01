@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	"gitlab.com/redirect-service/pkg/server"
+	"gitlab.com/Peakle/redirect-service/pkg/server"
 	"os"
 )
 
@@ -22,7 +22,7 @@ var (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "redirect-service"
+	app.Name = "redi"
 	app.Commands = commands
 	app.Version = fmt.Sprintf("%s - %s", Version, CommitID)
 

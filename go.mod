@@ -1,4 +1,4 @@
-module gitlab.com/redirect-service
+module gitlab.com/Peakle/redirect-service
 
 go 1.14
 

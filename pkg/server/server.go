@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/urfave/cli"
 	"github.com/valyala/fasthttp"
+	"net/url"
 )
 
 func StartServer(c *cli.Context) {
@@ -11,10 +12,11 @@ func StartServer(c *cli.Context) {
 		switch string(ctx.Path()) {
 		case "/create":
 			handleCreate(ctx)
-		case "/redirect":
+		default:
 			handleRedirect(ctx)
 		}
 	}
+
 	err := fasthttp.ListenAndServe(":80", requestHandler)
 	if err != nil {
 		fmt.Print(err)
@@ -22,7 +24,11 @@ func StartServer(c *cli.Context) {
 }
 
 func handleRedirect(ctx *fasthttp.RequestCtx) {
+	//var err error
 
+	uri, _ := url.ParseRequestURI(string(ctx.Request.RequestURI()))
+
+	fmt.Print(uri.RawQuery)
 }
 
 func handleCreate(ctx *fasthttp.RequestCtx) {
