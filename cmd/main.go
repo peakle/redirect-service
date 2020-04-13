@@ -8,14 +8,19 @@ import (
 )
 
 var (
-	Version  = "0"
-	CommitID = "0"
+	Hostname = "http://localhost:443"
 	commands = []cli.Command{
 		{
 			Name:        "server",
 			Description: "starts redirect server",
 			Action:      server.StartServer,
 			Category:    "server",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     "hostname",
+					Value:    Hostname,
+				},
+			},
 		},
 	}
 )
@@ -24,7 +29,6 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "redi"
 	app.Commands = commands
-	app.Version = fmt.Sprintf("%s - %s", Version, CommitID)
 
 	err := app.Run(os.Args)
 	if err != nil {

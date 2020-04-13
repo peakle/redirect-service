@@ -1,108 +1,116 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
+
+	"github.com/oschwald/geoip2-golang"
 	"github.com/urfave/cli"
 	"github.com/valyala/fasthttp"
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
-	"os"
-	"strconv"
 )
 
-const (
-	VkGroupId    = 177387678
-	Confirmation = "confirmation"
-	MessageNew   = "message_new"
-)
+const SqlInjectionFilter = "()*\\,!;'`\""
 
-var secret string
-var vkConfirmationToken string
-
-type vkMessage struct {
-	Secret  string          `json:"secret"`
-	GroupId int             `json:"group_id"`
-	Type    string          `json:"type"`
-	Object  vkMessageObject `json:"object"`
-}
-
-type vkMessageObject struct {
-	FromId int    `json:"from_id"`
-	Text   string `json:"text"`
-}
+var db *geoip2.Reader
 
 func StartServer(c *cli.Context) {
-	fmt.Println("Start server...")
-	secret = os.Getenv("VK_API_SECRET")
-	vkConfirmationToken = os.Getenv("VK_CONFIRMATION_TOKEN")
+	var err error
 
+	fmt.Println("Start server...")
+
+	db, err = geoip2.Open("GeoIP2.mmdb")
+	defer db.Close()
+
+	var path string
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
-		switch string(ctx.Path()) {
-		case "/vk":
-			handleVK(ctx)
+		path = string(ctx.Path())
+		fmt.Println(path, string(ctx.Request.Host()))
+		switch path {
+		case "/":
+			handleFront(ctx)
+		case "/creation":
+			handleCreateToken(ctx)
+		case "/stats":
+			handleStats(ctx)
 		default:
-			handleRedirect(ctx)
+			if strings.Contains(path, "favicon.ico") {
+				return
+			}
+
+			handleRedirect(ctx, path)
 		}
 	}
 
-	err := fasthttp.ListenAndServe(":80", requestHandler)
+	go fasthttp.ListenAndServe(":80", func(ctx *fasthttp.RequestCtx) {
+		ctx.Response.Header.Set("Location", c.String("hostname")+string(ctx.Path()))
+		ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
+
+		ctx.Response.SetStatusCode(302)
+
+		fmt.Print(ctx)
+	})
+
+	err = fasthttp.ListenAndServe(":443", requestHandler)
 	if err != nil {
 		fmt.Print(err)
 	}
 }
 
-func handleRedirect(ctx *fasthttp.RequestCtx) {
-	var err error
-	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
+func handleFront(ctx *fasthttp.RequestCtx) {
+	ctx.SendFile("./index.html")
+}
 
-	redirectUri, err := provider.FindUrl(string(ctx.Request.RequestURI()))
+func handleStats(ctx *fasthttp.RequestCtx) {
+
+}
+
+func handleCreateToken(ctx *fasthttp.RequestCtx) {
+	var uri string
+	uri = string(ctx.Request.PostArgs().Peek("externalUrl"))
+	uri, err := provider.Create(strings.Trim(uri, SqlInjectionFilter))
 	if err != nil {
-		_, _ = fmt.Fprint(ctx, "")
+		fmt.Printf("error occurred on create token: %v", err)
+		_, _ = fmt.Fprintf(ctx, "please reload page and try again")
+		return
+	}
+
+	_, _ = fmt.Fprintf(ctx, uri)
+}
+
+func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
+	var err error
+	var redirectUri string
+
+	redirectUri, err = provider.FindUrl(strings.Trim(path, SqlInjectionFilter))
+	if err != nil {
+		fmt.Printf("error occurred on find url: %v", err)
+		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", url.PathEscape(strings.Trim(path, "/")))
 	}
 
 	ctx.Response.Header.Set("Location", redirectUri)
-	ctx.Response.SetStatusCode(301)
+	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
+
+	ctx.Response.SetStatusCode(302)
+
+	fmt.Print(ctx)
+
 	ctx.SetConnectionClose()
 
-	provider.RecordStats(ctx)
-}
+	var city *geoip2.City
 
-func handleVK(ctx *fasthttp.RequestCtx) {
-	var err error
-
-	message := vkMessage{}
-	err = json.Unmarshal(ctx.Request.Body(), &message)
+	city, err = db.City(ctx.RemoteIP())
 	if err != nil {
-		fmt.Printf("error occurred on parse vk message: %v", err)
-		_, _ = fmt.Fprint(ctx, "")
+		fmt.Printf("error occurred on parse remote ip: %v", err)
 		return
 	}
 
-	if message.Secret != secret || len(message.Secret) == 0 {
-		_, _ = fmt.Fprint(ctx, "")
-		return
+	var v string
+	var isSet bool
+	if v, isSet = city.City.Names["ru"]; isSet {
+		provider.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
+	} else if v, isSet = city.Country.Names["ru"]; isSet {
+		provider.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
 	}
-
-	switch message.Type {
-	case Confirmation:
-		if message.GroupId != VkGroupId {
-			_, _ = fmt.Fprint(ctx, "")
-			return
-		}
-
-		_, _ = fmt.Fprint(ctx, vkConfirmationToken)
-	case MessageNew:
-		_, _ = fmt.Fprint(ctx, "ok")
-
-		var r string
-		r, err = provider.Create(message.Object.Text)
-		if err != nil {
-			r = "невалидный url"
-		}
-
-		provider.SendMessageVK(strconv.Itoa(message.Object.FromId), r)
-	default:
-		_, _ = fmt.Fprint(ctx, "")
-	}
-	ctx.SetConnectionClose()
 }
