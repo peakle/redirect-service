@@ -10,7 +10,7 @@ import (
 
 const CreationError = "creation error"
 
-func Create(uri string) (string, error) {
+func (m *SQLManager) Create(uri string) (string, error) {
 	var err error
 	_, err = url.ParseRequestURI(uri)
 	if err != nil {
@@ -36,16 +36,4 @@ func Create(uri string) (string, error) {
 	}
 
 	return r, nil
-}
-
-func FindUrl(token string) (string, error) {
-	InitManager()
-
-	return m.findUrl(token)
-}
-
-func RecordStats(ip, useragent, city string) {
-	InitManager()
-
-	m.recordStats(ip, useragent, city)
 }

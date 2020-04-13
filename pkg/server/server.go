@@ -13,7 +13,10 @@ import (
 
 const SqlInjectionFilter = "()*\\,!;'`\""
 
-var db *geoip2.Reader
+var (
+	db *geoip2.Reader
+	m  *provider.SQLManager
+)
 
 func StartServer(c *cli.Context) {
 	var err error
@@ -23,10 +26,12 @@ func StartServer(c *cli.Context) {
 	db, err = geoip2.Open("GeoIP2.mmdb")
 	defer db.Close()
 
+	m = provider.InitManager()
+	defer m.Close()
+
 	var path string
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		path = string(ctx.Path())
-		fmt.Println(path, string(ctx.Request.Host()))
 		switch path {
 		case "/":
 			handleFront(ctx)
@@ -69,7 +74,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 func handleCreateToken(ctx *fasthttp.RequestCtx) {
 	var uri string
 	uri = string(ctx.Request.PostArgs().Peek("externalUrl"))
-	uri, err := provider.Create(strings.Trim(uri, SqlInjectionFilter))
+	uri, err := m.Create(strings.Trim(uri, SqlInjectionFilter))
 	if err != nil {
 		fmt.Printf("error occurred on create token: %v", err)
 		_, _ = fmt.Fprintf(ctx, "please reload page and try again")
@@ -83,7 +88,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var err error
 	var redirectUri string
 
-	redirectUri, err = provider.FindUrl(strings.Trim(path, SqlInjectionFilter))
+	redirectUri, err = m.FindUrl(strings.Trim(path, SqlInjectionFilter))
 	if err != nil {
 		fmt.Printf("error occurred on find url: %v", err)
 		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", url.PathEscape(strings.Trim(path, "/")))
@@ -109,8 +114,8 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var v string
 	var isSet bool
 	if v, isSet = city.City.Names["ru"]; isSet {
-		provider.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
+		m.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
 	} else if v, isSet = city.Country.Names["ru"]; isSet {
-		provider.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
+		m.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
 	}
 }

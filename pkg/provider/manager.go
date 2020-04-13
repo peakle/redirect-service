@@ -24,7 +24,7 @@ type config struct {
 	DBName   string
 }
 
-func (m *SQLManager) recordStats(ip, useragent, city string) {
+func (m *SQLManager) RecordStats(ip, useragent, city string) {
 	now := time.Now().Format("2006-01-02")
 
 	dataInsert := sg.InsertData{
@@ -50,7 +50,7 @@ func (m *SQLManager) recordStats(ip, useragent, city string) {
 	m.insert(&dataInsert)
 }
 
-func (m *SQLManager) findUrl(token string) (string, error) {
+func (m *SQLManager) FindUrl(token string) (string, error) {
 	query := `
 		SELECT r.url
 		FROM Redirects r
