@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-var m *SQLManager
-
 type SQLManager struct {
 	conn *sql.DB
 }
@@ -98,7 +96,7 @@ func (m *SQLManager) TokenExist(token string) bool {
 }
 
 func InitManager() *SQLManager {
-	m = &SQLManager{}
+	m := &SQLManager{}
 
 	m.open(&config{
 		Host:     os.Getenv("MYSQL_HOST"),
@@ -140,7 +138,7 @@ func (m *SQLManager) Close() {
 
 func handleErr(err error) {
 	if err != nil {
-		fmt.Print(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }

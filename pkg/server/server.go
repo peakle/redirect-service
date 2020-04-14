@@ -11,7 +11,7 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
 )
 
-const SqlInjectionFilter = "()*\\,!;'`\""
+const SqlInjectionFilter = "()<>*\\,!;'`\" "
 
 var (
 	db *geoip2.Reader
@@ -54,12 +54,12 @@ func StartServer(c *cli.Context) {
 
 		ctx.Response.SetStatusCode(302)
 
-		fmt.Print(ctx)
+		fmt.Println(ctx)
 	})
 
 	err = fasthttp.ListenAndServe(":443", requestHandler)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
 	}
 }
 
@@ -99,7 +99,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 
 	ctx.Response.SetStatusCode(302)
 
-	fmt.Print(ctx)
+	fmt.Println(ctx)
 
 	ctx.SetConnectionClose()
 

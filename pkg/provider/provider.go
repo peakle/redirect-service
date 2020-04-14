@@ -17,8 +17,6 @@ func (m *SQLManager) Create(uri string) (string, error) {
 		return "", err
 	}
 
-	InitManager()
-
 	t := make([]byte, 7)
 	var r string
 
