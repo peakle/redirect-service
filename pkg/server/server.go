@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"net/url"
+	"net/http"
 	"strings"
 
 	"github.com/oschwald/geoip2-golang"
@@ -11,11 +11,20 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
 )
 
-const SqlInjectionFilter = "()<>*\\,!;'`\" "
-
 var (
-	db *geoip2.Reader
-	m  *provider.SQLManager
+	db          *geoip2.Reader
+	m           *provider.SQLManager
+	uriReplacer = strings.NewReplacer(
+		"*", "",
+		"<", "",
+		">", "",
+		"(", "",
+		")", "",
+		"'", "",
+		`"`, "",
+		`;`, "",
+		" ", "",
+	)
 )
 
 func StartServer(c *cli.Context) {
@@ -72,11 +81,25 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 }
 
 func handleCreateToken(ctx *fasthttp.RequestCtx) {
-	var uri string
+	var userId, uri, token string
+	var err error
+
 	uri = string(ctx.Request.PostArgs().Peek("externalUrl"))
-	uri, err := m.Create(strings.Trim(uri, SqlInjectionFilter))
+	userId = string(ctx.Request.PostArgs().Peek("externalUrl"))
+
+	uri = uriReplacer.Replace(uri)
+	token, err = m.Create(uri)
 	if err != nil {
-		fmt.Printf("error occurred on create token: %v", err)
+		fmt.Printf("error occurred on create token: %v, provided url: %s", err, uri)
+		_, _ = fmt.Fprintf(ctx, "please reload page and try again")
+		return
+	}
+
+	err = m.InsertToken(userId, uri, token)
+	if err != nil {
+		fmt.Printf("error occurred on insert token: %v, provided data: userId: %s, uri: %s, token: %s", err, userId, uri, token)
+
+		ctx.Response.SetStatusCode(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(ctx, "please reload page and try again")
 		return
 	}
@@ -88,10 +111,10 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var err error
 	var redirectUri string
 
-	redirectUri, err = m.FindUrl(strings.Trim(path, SqlInjectionFilter))
+	redirectUri, err = m.FindUrl(uriReplacer.Replace(path))
 	if err != nil {
 		fmt.Printf("error occurred on find url: %v", err)
-		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", url.PathEscape(strings.Trim(path, "/")))
+		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
 	}
 
 	ctx.Response.Header.Set("Location", redirectUri)

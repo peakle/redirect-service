@@ -2,6 +2,7 @@ package provider
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	idgen "github.com/wakeapp/go-id-generator"
@@ -70,6 +71,33 @@ func (m *SQLManager) FindUrl(token string) (string, error) {
 	}
 
 	return r, nil
+}
+
+func (m *SQLManager) InsertToken(userId, uri, token string) error {
+	if isEmpty(userId) || isEmpty(uri) || isEmpty(token) {
+		return errors.New(fmt.Sprintf("null param provided: userId %s, uri %s, token %s", userId, uri, token))
+	}
+
+	const TableName = "Redirects"
+
+	data := &sg.InsertData{
+		TableName: TableName,
+		Fields: []string{
+			"id",
+			"token",
+			"url",
+			"userId",
+		},
+	}
+
+	data.Add([]string{
+		idgen.Id(),
+		token,
+		uri,
+	})
+	m.insert(data)
+
+	return nil
 }
 
 func (m *SQLManager) TokenExist(token string) bool {

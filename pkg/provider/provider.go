@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"regexp"
 	"time"
 )
 
@@ -17,13 +18,13 @@ func (m *SQLManager) Create(uri string) (string, error) {
 		return "", err
 	}
 
-	t := make([]byte, 7)
-	var r string
+	r := make([]byte, 7)
+	var t string
 
 	for i := 0; ; i++ {
-		rand.Read(t)
-		r = fmt.Sprintf("%x", t)
-		if !m.TokenExist(r) {
+		rand.Read(r)
+		t = fmt.Sprintf("%x", r)
+		if !m.TokenExist(t) {
 			break
 		}
 
@@ -33,5 +34,11 @@ func (m *SQLManager) Create(uri string) (string, error) {
 		}
 	}
 
-	return r, nil
+	return t, nil
+}
+
+func isEmpty(str string) bool {
+	regex := regexp.MustCompile(`(?m)\s+`)
+
+	return regex.ReplaceAllString(str, "") == ""
 }
