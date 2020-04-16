@@ -84,8 +84,8 @@ func handleCreateToken(ctx *fasthttp.RequestCtx) {
 	var userId, uri, token string
 	var err error
 
-	uri = string(ctx.Request.PostArgs().Peek("externalUrl"))
-	userId = string(ctx.Request.PostArgs().Peek("externalUrl"))
+	uri = string(ctx.Request.PostArgs().Peek("external_url"))
+	userId = string(ctx.Request.PostArgs().Peek("user_id"))
 
 	uri = uriReplacer.Replace(uri)
 	token, err = m.Create(uri)

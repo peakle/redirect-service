@@ -1,12 +1,67 @@
 <html>
+<meta charset="UTF-8">
 <body>
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+      integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 
-<form class="form-inline md-form mr-auto mb-4" action="/creation" id="send_form" method="post">
-    <label for="externalUrl">Куда будем перенаправлять?</label>
-    <input class="form-control mr-sm-2" type="text" placeholder="Search" aria-label="Search" name="externalUrl">
-    <button class="btn aqua-gradient btn-rounded btn-sm my-0" type="submit">Search</button>
-</form>
+<div class="card text-center">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="main" href="#">Констуктор</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="stats" href="#">Статистика</a>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body text-center">
+        <h5 class="card-title">Куда будем перенаправлять?</h5>
+        <div class="d-flex justify-content-center">
+            <form class="form-inline" id="main-form">
+                <div class="form-group input-group mx-sm-3 mb-2">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text">http://</div>
+                    </div>
+                    <input type="text" class="form-control" id="external_id" name="external_id"
+                           placeholder="Твой url">
+                </div>
+                <button type="submit" id="submit_form" class="btn btn-primary mb-2">Создать</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    $("#main-form").submit(function (e) {
+        e.preventDefault();
+        let data = JSON.stringify($(this).serialize());
+        $.ajax({
+            url: "/creation",
+            method: "post",
+            data: {
+                data
+            },
+            success: function () {
+                //TODO render result popup
+            },
+            fail: function () {
+                location.reload()
+            },
+        });
+    });
+
+    //render stats
+    $("#stats").click(function (e) {
+        //TODO
+    });
+
+    //render main page
+    $("#main").click(function (e) {
+        //TODO
+    });
+</script>
+
 </body>
 </html>
