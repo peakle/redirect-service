@@ -7,7 +7,7 @@ CREATE USER IF NOT EXISTS 'read_user'@'%' IDENTIFIED BY '';
 GRANT SELECT ON *.* TO 'read_user'@'%';
 
 CREATE USER IF NOT EXISTS 'delete_user'@'%' IDENTIFIED BY '';
-GRANT DELETE ON *.* TO 'read_user'@'%';
+GRANT DELETE ON *.* TO 'delete_user'@'%';
 
 CREATE TABLE IF NOT EXISTS redirects
 (
@@ -18,9 +18,6 @@ CREATE TABLE IF NOT EXISTS redirects
     constraint Redirects_token_uindex
         unique (token)
 );
-
-alter table redirects
-    add primary key (token);
 
 CREATE TABLE IF NOT EXISTS stats
 (
