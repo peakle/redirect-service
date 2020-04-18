@@ -8,6 +8,7 @@ import (
 	idgen "github.com/wakeapp/go-id-generator"
 	sg "github.com/wakeapp/go-sql-generator"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -23,6 +24,13 @@ type config struct {
 	DBName   string
 }
 
+type StatResponse struct {
+	Useragent string `json:"useragent"`
+	Ip        string `json:"ip"`
+	City      string `json:"city"`
+	CreatedAt string `json:"created_at"`
+}
+
 func (m *SQLManager) RecordStats(ip, useragent, city string) {
 	now := time.Now().Format("2006-01-02")
 
@@ -33,7 +41,7 @@ func (m *SQLManager) RecordStats(ip, useragent, city string) {
 			"useragent",
 			"ip",
 			"city",
-			"createAt",
+			"created_at",
 		},
 		IsIgnore: true,
 	}
@@ -47,6 +55,43 @@ func (m *SQLManager) RecordStats(ip, useragent, city string) {
 	})
 
 	m.insert(&dataInsert)
+}
+
+func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatResponse, error) {
+	query := `
+		SELECT
+			s.useragent,
+			s.ip,
+			s.city,
+			s.created_at
+		FROM Stats s
+		JOIN Redirects r on r.token = s.token 
+		WHERE 1
+			and r.token = ?
+			and r.user_id = ?
+	`
+
+	rows, err := m.conn.Query(query, token, userId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return []StatResponse{}, nil
+		}
+
+		return []StatResponse{}, err
+	}
+
+	var resp []StatResponse
+	for rows.Next() {
+		var r StatResponse
+		err = rows.Scan(&r.Useragent, &r.Ip, &r.City, &r.CreatedAt)
+		if err != nil {
+			return []StatResponse{}, err
+		}
+
+		resp = append(resp, r)
+	}
+
+	return resp, nil
 }
 
 func (m *SQLManager) FindUrl(token string) (string, error) {
@@ -83,17 +128,20 @@ func (m *SQLManager) InsertToken(userId, uri, token string) error {
 	data := &sg.InsertData{
 		TableName: TableName,
 		Fields: []string{
-			"id",
 			"token",
 			"url",
-			"userId",
+			"user_id",
+			"created_at",
 		},
 	}
+
+	now := time.Now().Format("2006-01-02 15:04:05")
 
 	data.Add([]string{
 		idgen.Id(),
 		token,
 		uri,
+		now,
 	})
 	m.insert(data)
 
@@ -167,7 +215,7 @@ func (m *SQLManager) Close() {
 func handleErr(err error) {
 	if err != nil {
 		fmt.Println(err.Error())
-		os.Exit(1)
+		runtime.Goexit()
 	}
 }
 

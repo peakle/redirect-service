@@ -1,2 +1,4 @@
 .idea
 GeoIP2.mmdb
+.env
+docker/.data

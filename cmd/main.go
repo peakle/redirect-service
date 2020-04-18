@@ -15,20 +15,17 @@ var (
 			Description: "starts redirect server",
 			Action:      server.StartServer,
 			Category:    "server",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:     "hostname",
-					Value:    Hostname,
-				},
-			},
 		},
 	}
 )
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "redi"
+	app.Name = "rds"
 	app.Commands = commands
+	app.Metadata = map[string]interface{}{
+		"hostname": Hostname,
+	}
 
 	err := app.Run(os.Args)
 	if err != nil {

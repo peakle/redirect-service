@@ -1,0 +1,44 @@
+version: "3.7"
+
+volumes:
+    app_volume:
+        name: ${PROJECT_NAME}_app_volume
+        driver: local
+        driver_opts:
+            type: nfs
+            o: addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
+            device: ":${PWD}"
+
+services:
+    rds-db:
+        container_name: ${PROJECT_NAME}-db
+        build:
+          context: mysql
+        ports:
+            - 3306:3306
+        volumes:
+            - ./.data/db:/var/lib/mysql:rw
+            - ./mysql/dump:/docker-entrypoint-initdb.d
+        user: mysql
+        environment:
+            MYSQL_HOST: ${MYSQL_HOST}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    rds-server:
+        container_name: ${PROJECT_NAME}-server
+        build:
+            context: ../.
+            args:
+                MYSQL_USER: ${MYSQL_USER}
+                MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        entrypoint: ["/app/rds", "server"]
+        depends_on:
+            - rds-db
+        ports:
+            - 80:80
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_HOST: ${MYSQL_HOST}
