@@ -1,3 +1,5 @@
+include .env
+
 GOOS=linux
 GOARCH=amd64
 HOSTNAME="very.grozny.ru"

@@ -2,66 +2,143 @@
 <meta charset="UTF-8">
 <body>
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
-      integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+	  integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-
-<div class="card text-center">
-    <div class="card-header">
-        <ul class="nav nav-tabs card-header-tabs">
-            <li class="nav-item">
-                <a class="nav-link active" id="main" href="#">Констуктор</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="stats" href="#">Статистика</a>
-            </li>
-        </ul>
-    </div>
-    <div class="card-body text-center">
-        <h5 class="card-title">Куда будем перенаправлять?</h5>
-        <div class="d-flex justify-content-center">
-            <form class="form-inline" id="main-form">
-                <div class="form-group input-group mx-sm-3 mb-2">
-                    <div class="input-group-prepend">
-                        <div class="input-group-text">http://</div>
-                    </div>
-                    <input type="text" class="form-control" id="external_id" name="external_id"
-                           placeholder="Твой url">
-                </div>
-                <button type="submit" id="submit_form" class="btn btn-primary mb-2">Создать</button>
-            </form>
-        </div>
-    </div>
-</div>
-
+<script src="https://canvasjs.com/assets/script/jquery.canvasjs.min.js"></script>
 <script>
-    $("#main-form").submit(function (e) {
-        e.preventDefault();
-        let data = JSON.stringify($(this).serialize());
-        $.ajax({
-            url: "/creation",
-            method: "post",
-            data: {
-                data
-            },
-            success: function () {
-                //TODO render result popup
-            },
-            fail: function () {
-                location.reload()
-            },
+    window.onload = function () {
+        let stats = $("#stats");
+        let main = $("#main");
+        let mainBlock = $("#main-block");
+        let statsBlock = $("#stats-block");
+
+        //render stats
+        stats.click(function (e) {
+            e.preventDefault();
+
+            mainBlock.hide();
+            main.removeClass("active");
+
+            statsBlock.show();
+            stats.addClass("active");
         });
-    });
 
-    //render stats
-    $("#stats").click(function (e) {
-        //TODO
-    });
+        //render main page
+        main.click(function (e) {
+            e.preventDefault();
 
-    //render main page
-    $("#main").click(function (e) {
-        //TODO
-    });
+            statsBlock.hide();
+            stats.removeClass("active");
+
+            mainBlock.show();
+            main.addClass("active");
+        });
+
+        $("#stats-form").submit(function () {
+            let drawChart = function (dataPoints) {
+                let options = {
+                    title: {
+                        text: "Статистика посещений"
+                    },
+                    animationEnabled: true,
+                    data: [{
+                        type: "pie",
+                        startAngle: 40,
+                        toolTipContent: "<b>{label}</b>: {y}%",
+                        showInLegend: "true",
+                        legendText: "{label}",
+                        indexLabelFontSize: 16,
+                        indexLabel: "{label} - {y}%",
+                        dataPoints: dataPoints
+                    }]
+                };
+
+                statsBlock.hide();
+                let chart = $("#chartContainer");
+                chart.show();
+                chart.CanvasJSChart(options);
+            };
+
+            let data = JSON.stringify($(this).serialize());
+
+            $.ajax({
+                url: "/stats",
+                method: "post",
+                data: {
+                    data
+                },
+                success: function (resp) {
+                    drawChart(resp);
+                },
+                fail: function () {
+                    //TODO add error message
+                    location.reload()
+                }
+            });
+        });
+
+        $("#main-form").submit(function (e) {
+            e.preventDefault();
+            let data = JSON.stringify($(this).serialize());
+            $.ajax({
+                url: "/creation",
+                method: "post",
+                data: {
+                    data
+                },
+                success: function (resp) {
+                    // TODO add success message display with copy box
+                },
+                fail: function () {
+                    location.reload()
+                },
+            });
+        });
+    };
 </script>
 
+<div class="card text-center">
+	<div class="card-header">
+		<ul class="nav nav-tabs card-header-tabs">
+			<li class="nav-item">
+				<a class="nav-link active" id="main" href="#">Констуктор</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" id="stats" href="#">Статистика</a>
+			</li>
+		</ul>
+	</div>
+	<div class="card-body text-center" id="main-block" style="display: inline">
+		<h5 class="card-title">Куда будем перенаправлять?</h5>
+		<div class="d-flex justify-content-center">
+			<form class="form-inline" id="main-form">
+				<div class="form-group input-group mx-sm-3 mb-2">
+					<div class="input-group-prepend">
+						<div class="input-group-text">http://</div>
+					</div>
+					<input type="text" class="form-control" id="external_id" name="external_id"
+						   placeholder="Твой url">
+				</div>
+				<button type="submit" id="submit_form" class="btn btn-primary mb-2">Создать</button>
+			</form>
+		</div>
+	</div>
+	<div class="card-body text-center" id="stats-block" style="display: none">
+		<h5 class="card-title">Статистика</h5>
+		<div class="d-flex justify-content-center">
+			<form class="form-inline" id="stats-form">
+				<div class="form-group input-group mx-sm-3 mb-2">
+					<input type="text" class="form-control" name="external_id"
+						   placeholder="Поиск по url">
+
+					<div class="input-group-append">
+						<button type="submit" class="input-group-text btn btn-primary">Поиск</button>
+					</div>
+				</div>
+			</form>
+			<div id="chartContainer" style="height: 300px; width: 100%; display: none"></div>
+		</div>
+	</div>
+</div>
 </body>
 </html>

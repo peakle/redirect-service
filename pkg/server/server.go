@@ -93,7 +93,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 
 	stats, err := mRead.FindUrlByTokenAndUserId(userId, token)
 	if err != nil {
-		fmt.Printf("error occurred on handle stats: %v, token: %s", err, token)
+		fmt.Printf("error occurred on handle stats: %v, token: %s \r\n", err, token)
 		_, _ = fmt.Fprintf(ctx, "[]")
 
 		return
@@ -102,7 +102,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	var r []byte
 	r, err = json.Marshal(stats)
 	if err != nil {
-		fmt.Printf("error occurred on handle stats format json: %v, token: %s", err, token)
+		fmt.Printf("error occurred on handle stats format json: %v, token: %s \r\n", err, token)
 		_, _ = fmt.Fprintf(ctx, "[]")
 
 		return
@@ -126,7 +126,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx) {
 	uri = uriReplacer.Replace(uri)
 	token, err = mRead.Create(uri)
 	if err != nil {
-		fmt.Printf("error occurred on create token: %v, provided url: %s", err, uri)
+		fmt.Printf("error occurred on create token: %v, provided url: %s \r\n", err, uri)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
 
 		return
@@ -134,7 +134,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx) {
 
 	err = mWrite.InsertToken(userId, uri, token)
 	if err != nil {
-		fmt.Printf("error occurred on insert token: %v, provided data: userId: %s, uri: %s, token: %s", err, userId, uri, token)
+		fmt.Printf("error occurred on insert token: %v, provided data: userId: %s, uri: %s, token: %s \r\n", err, userId, uri, token)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
 
 		return
@@ -149,7 +149,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 
 	redirectUri, err = mRead.FindUrl(uriReplacer.Replace(path))
 	if err != nil {
-		fmt.Printf("error occurred on find url: %v", err)
+		fmt.Printf("error occurred on find url: %v \r\n", err)
 		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
 	}
 
@@ -166,7 +166,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 
 	city, err = db.City(ctx.RemoteIP())
 	if err != nil {
-		fmt.Printf("error occurred on parse remote ip: %v", err)
+		fmt.Printf("error occurred on parse remote ip: %v \r\n", err)
 		return
 	}
 
