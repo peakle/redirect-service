@@ -32,10 +32,12 @@ type StatResponse struct {
 }
 
 func (m *SQLManager) RecordStats(ip, useragent, city string) {
+	const TableName = "stats"
+
 	now := time.Now().Format("2006-01-02")
 
 	dataInsert := sg.InsertData{
-		TableName: "Stats",
+		TableName: TableName,
 		Fields: []string{
 			"id",
 			"useragent",
@@ -64,8 +66,8 @@ func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatRespon
 			s.ip,
 			s.city,
 			s.created_at
-		FROM Stats s
-		JOIN Redirects r on r.token = s.token 
+		FROM stats s
+		JOIN redirects r on r.token = s.token 
 		WHERE 1
 			and r.token = ?
 			and r.user_id = ?
@@ -97,7 +99,7 @@ func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatRespon
 func (m *SQLManager) FindUrl(token string) (string, error) {
 	query := `
 		SELECT r.url
-		FROM Redirects r
+		FROM redirects r
 		WHERE 1
 			and r.token = ?
 		LIMIT 1
@@ -123,7 +125,7 @@ func (m *SQLManager) InsertToken(userId, uri, token string) error {
 		return errors.New(fmt.Sprintf("null param provided: userId %s, uri %s, token %s", userId, uri, token))
 	}
 
-	const TableName = "Redirects"
+	const TableName = "redirects"
 
 	data := &sg.InsertData{
 		TableName: TableName,
@@ -151,7 +153,7 @@ func (m *SQLManager) InsertToken(userId, uri, token string) error {
 func (m *SQLManager) TokenExist(token string) bool {
 	query := `
 	   	SELECT COUNT(*)
-		FROM Redirects r
+		FROM redirects r
 		WHERE 1
 			AND token = ?
 	`
