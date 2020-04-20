@@ -8,8 +8,10 @@ import (
 )
 
 var (
-	Hostname = "http://localhost:443"
-	commands = []cli.Command{
+	Hostname   = "http://localhost:443"
+	WriteUser  = "root:root"
+	ReadUser   = "root:root"
+	commands   = []cli.Command{
 		{
 			Name:        "server",
 			Description: "starts redirect server",
@@ -24,7 +26,9 @@ func main() {
 	app.Name = "rds"
 	app.Commands = commands
 	app.Metadata = map[string]interface{}{
-		"hostname": Hostname,
+		"Hostname": Hostname,
+		"WriteUser": WriteUser,
+		"ReadUser": ReadUser,
 	}
 
 	err := app.Run(os.Args)

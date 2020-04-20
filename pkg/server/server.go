@@ -28,7 +28,10 @@ var (
 	)
 )
 
-const ErrorMessage = "please reload page and try again"
+const (
+	ErrorMessage = "please reload page and try again"
+	FrontPage    = "./index.html"
+)
 
 func StartServer(c *cli.Context) {
 	var err error
@@ -38,13 +41,13 @@ func StartServer(c *cli.Context) {
 	db, err = geoip2.Open("GeoIP2.mmdb")
 	defer db.Close()
 
-	mRead = provider.InitManager()
-	mWrite = provider.InitManager()
+	mRead = provider.InitManager(c.App.Metadata["ReadUser"].(string))
+	mWrite = provider.InitManager(c.App.Metadata["WriteUser"].(string))
 	defer mRead.Close()
 	defer mWrite.Close()
 
 	var hostname, path string
-	hostname = c.App.Metadata["hostname"].(string)
+	hostname = c.App.Metadata["Hostname"].(string)
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		path = string(ctx.Path())
@@ -80,7 +83,7 @@ func StartServer(c *cli.Context) {
 }
 
 func handleFront(ctx *fasthttp.RequestCtx) {
-	ctx.SendFile("./index.html")
+	ctx.SendFile(FrontPage)
 }
 
 func handleStats(ctx *fasthttp.RequestCtx) {

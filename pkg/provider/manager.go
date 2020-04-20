@@ -18,8 +18,7 @@ type SQLManager struct {
 
 type config struct {
 	Host     string
-	Username string
-	Pass     string
+	UserPass string
 	Port     string
 	DBName   string
 }
@@ -173,13 +172,12 @@ func (m *SQLManager) TokenExist(token string) bool {
 	return r > 0
 }
 
-func InitManager() *SQLManager {
+func InitManager(userPass string) *SQLManager {
 	m := &SQLManager{}
 
 	m.open(&config{
 		Host:     os.Getenv("MYSQL_HOST"),
-		Username: os.Getenv("MYSQL_USER"),
-		Pass:     os.Getenv("MYSQL_PASSWORD"),
+		UserPass: userPass,
 		Port:     "3306",
 		DBName:   os.Getenv("MYSQL_DATABASE"),
 	})
