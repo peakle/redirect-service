@@ -5,7 +5,17 @@
 	  integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script src="https://canvasjs.com/assets/script/jquery.canvasjs.min.js"></script>
+
 <script>
+    function getFormDataInJson(dataList) {
+        let map = {};
+        $.map(dataList, function (n) {
+            map[n['name']] = n['value'];
+        });
+
+        return JSON.stringify(map);
+    }
+
     window.onload = function () {
         let stats = $("#stats");
         let main = $("#main");
@@ -36,6 +46,8 @@
 
         $("#stats-form").submit(function () {
             let drawChart = function (dataPoints) {
+                console.log(dataPoints);
+                return;
                 let options = {
                     title: {
                         text: "Статистика посещений"
@@ -59,19 +71,14 @@
                 chart.CanvasJSChart(options);
             };
 
-            let data = JSON.stringify($(this).serialize());
-
             $.ajax({
                 url: "/stats",
                 method: "post",
-                data: {
-                    data
-                },
+                data: getFormDataInJson($(this).serializeArray()),
                 success: function (resp) {
                     drawChart(resp);
                 },
                 fail: function () {
-                    //TODO add error message
                     location.reload()
                 }
             });
@@ -79,15 +86,18 @@
 
         $("#main-form").submit(function (e) {
             e.preventDefault();
-            let data = JSON.stringify($(this).serialize());
             $.ajax({
                 url: "/creation",
                 method: "post",
-                data: {
-                    data
-                },
+                contentType: 'application/json;charset=UTF-8',
+                data: getFormDataInJson($(this).serializeArray()),
                 success: function (resp) {
-                    // TODO add success message display with copy box
+                    let r = JSON.parse(resp);
+                    if (r.code !== 0) {
+                        alert(r.text);
+						return;
+					}
+                    //TODO green bubble with response text
                 },
                 fail: function () {
                     location.reload()
@@ -116,8 +126,8 @@
 					<div class="input-group-prepend">
 						<div class="input-group-text">http://</div>
 					</div>
-					<input type="text" class="form-control" id="external_id" name="external_id"
-						   placeholder="Твой url">
+					<input type="url" class="form-control" id="external_url" name="external_url"
+						   placeholder="Твой url" required>
 				</div>
 				<button type="submit" id="submit_form" class="btn btn-primary mb-2">Создать</button>
 			</form>
@@ -128,8 +138,8 @@
 		<div class="d-flex justify-content-center">
 			<form class="form-inline" id="stats-form">
 				<div class="form-group input-group mx-sm-3 mb-2">
-					<input type="text" class="form-control" name="external_id"
-						   placeholder="Поиск по url">
+					<input type="text" class="form-control" name="external_url"
+						   placeholder="Поиск по url" required>
 
 					<div class="input-group-append">
 						<button type="submit" class="input-group-text btn btn-primary">Поиск</button>

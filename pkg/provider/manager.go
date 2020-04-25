@@ -8,7 +8,6 @@ import (
 	idgen "github.com/wakeapp/go-id-generator"
 	sg "github.com/wakeapp/go-sql-generator"
 	"os"
-	"runtime"
 	"time"
 )
 
@@ -35,7 +34,7 @@ func (m *SQLManager) RecordStats(ip, useragent, city string) {
 
 	now := time.Now().Format("2006-01-02")
 
-	dataInsert := sg.InsertData{
+	dataInsert := &sg.InsertData{
 		TableName: TableName,
 		Fields: []string{
 			"id",
@@ -55,7 +54,7 @@ func (m *SQLManager) RecordStats(ip, useragent, city string) {
 		now,
 	})
 
-	m.insert(&dataInsert)
+	m.insert(dataInsert)
 }
 
 func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatResponse, error) {
@@ -144,7 +143,10 @@ func (m *SQLManager) InsertToken(userId, uri, token string) error {
 		uri,
 		now,
 	})
-	m.insert(data)
+
+	if len(data.ValuesList) != m.insert(data) {
+		return errors.New("unavailable to insert token")
+	}
 
 	return nil
 }
@@ -167,6 +169,7 @@ func (m *SQLManager) TokenExist(token string) bool {
 		}
 
 		handleErr(err)
+		return false
 	}
 
 	return r > 0
@@ -193,15 +196,24 @@ func (m *SQLManager) insert(dataInsert *sg.InsertData) int {
 	sqlGenerator := sg.MysqlSqlGenerator{}
 
 	query, args, err := sqlGenerator.GetInsertSql(*dataInsert)
-	handleErr(err)
+	if err != nil {
+		handleErr(err)
+		return 0
+	}
 
 	var stmt *sql.Stmt
 	stmt, err = m.conn.Prepare(query)
-	handleErr(err)
+	if err != nil {
+		handleErr(err)
+		return 0
+	}
 
 	var result sql.Result
 	result, err = stmt.Exec(args...)
-	handleErr(err)
+	if err != nil {
+		handleErr(err)
+		return 0
+	}
 
 	ra, _ := result.RowsAffected()
 
@@ -213,18 +225,16 @@ func (m *SQLManager) Close() {
 }
 
 func handleErr(err error) {
-	if err != nil {
-		fmt.Println(err.Error())
-		runtime.Goexit()
-	}
+	fmt.Printf("error occurred: %v", err)
 }
 
 func (m *SQLManager) open(c *config) {
 	var conn *sql.DB
 	var err error
-	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?collation=utf8_unicode_ci", c.Username, c.Pass, c.Host, c.Port, c.DBName)
+	dsn := fmt.Sprintf("%v@tcp(%v:%v)/%v?collation=utf8_unicode_ci", c.UserPass, c.Host, c.Port, c.DBName)
 	if conn, err = sql.Open("mysql", dsn); err != nil {
 		handleErr(err)
+		os.Exit(1)
 	}
 
 	m.conn = conn

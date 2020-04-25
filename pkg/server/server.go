@@ -11,6 +11,12 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
 )
 
+type EntryDto struct {
+	Url    string `json:"external_url"`
+	UserId string `json:"user_id"`
+	Token  string `json:"token"`
+}
+
 var (
 	db          *geoip2.Reader
 	mRead       *provider.SQLManager
@@ -25,11 +31,13 @@ var (
 		`"`, "",
 		`;`, "",
 		" ", "",
+		",", "",
 	)
 )
 
 const (
-	ErrorMessage = "please reload page and try again"
+	ErrorMessage = `{"code":1,"text":"please reload page and try again"}`
+	JsonResponse = `{"code":"%d","text":"%s"}`
 	FrontPage    = "./index.html"
 )
 
@@ -87,17 +95,29 @@ func handleFront(ctx *fasthttp.RequestCtx) {
 }
 
 func handleStats(ctx *fasthttp.RequestCtx) {
-	userId := string(ctx.Request.PostArgs().Peek("user_id"))
-	token := string(ctx.Request.PostArgs().Peek("token"))
+	var (
+		err      error
+		entryDto EntryDto
+	)
 
-	if userId == "" {
-		userId = "1"
+	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
+	if err != nil {
+		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
+		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+
+		return
 	}
 
-	stats, err := mRead.FindUrlByTokenAndUserId(userId, token)
+	if entryDto.UserId == "" {
+		entryDto.UserId = "1"
+	} else {
+		entryDto.UserId = uriReplacer.Replace(entryDto.UserId)
+	}
+
+	stats, err := mRead.FindUrlByTokenAndUserId(entryDto.UserId, uriReplacer.Replace(entryDto.Token))
 	if err != nil {
-		fmt.Printf("error occurred on handle stats: %v, token: %s \r\n", err, token)
-		_, _ = fmt.Fprintf(ctx, "[]")
+		fmt.Printf("error occurred on handle stats: %v, entryDto: %v \r\n", err, entryDto)
+		_, _ = fmt.Fprintf(ctx, ErrorMessage)
 
 		return
 	}
@@ -105,8 +125,8 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	var r []byte
 	r, err = json.Marshal(stats)
 	if err != nil {
-		fmt.Printf("error occurred on handle stats format json: %v, token: %s \r\n", err, token)
-		_, _ = fmt.Fprintf(ctx, "[]")
+		fmt.Printf("error occurred on handle stats format json: %v, entryDto: %v \r\n", err, entryDto)
+		_, _ = fmt.Fprintf(ctx, ErrorMessage)
 
 		return
 	}
@@ -116,34 +136,44 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 }
 
 func handleCreateToken(ctx *fasthttp.RequestCtx) {
-	var userId, uri, token string
-	var err error
+	var (
+		token    string
+		err      error
+		entryDto EntryDto
+	)
 
-	uri = string(ctx.Request.PostArgs().Peek("external_url"))
-	userId = string(ctx.Request.PostArgs().Peek("user_id"))
-
-	if userId == "" {
-		userId = "1"
-	}
-
-	uri = uriReplacer.Replace(uri)
-	token, err = mRead.Create(uri)
+	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
-		fmt.Printf("error occurred on create token: %v, provided url: %s \r\n", err, uri)
+		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
 
 		return
 	}
 
-	err = mWrite.InsertToken(userId, uri, token)
+	if entryDto.UserId == "" {
+		entryDto.UserId = "1"
+	} else {
+		entryDto.UserId = uriReplacer.Replace(entryDto.UserId)
+	}
+
+	entryDto.Url = validateAndFixUrl(entryDto.Url)
+	token, err = mRead.Create(entryDto.Url)
 	if err != nil {
-		fmt.Printf("error occurred on insert token: %v, provided data: userId: %s, uri: %s, token: %s \r\n", err, userId, uri, token)
+		fmt.Printf("error occurred on create token: %v, entryDto: %v \r\n", err, entryDto)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
 
 		return
 	}
 
-	_, _ = fmt.Fprintf(ctx, uri)
+	err = mWrite.InsertToken(entryDto.UserId, entryDto.Url, token)
+	if err != nil {
+		fmt.Printf("error occurred on insert token: %v, provided data: entryDto: %v, token: %s \r\n", err, entryDto, token)
+		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+
+		return
+	}
+
+	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(JsonResponse, 0, token))
 }
 
 func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
@@ -179,5 +209,15 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), city.Country.Names["ru"]+" "+v)
 	} else if v, isSet = city.Country.Names["ru"]; isSet {
 		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
+	}
+}
+
+func validateAndFixUrl(u string) string {
+	u = uriReplacer.Replace(u)
+
+	if strings.Contains(u, "http://") || strings.Contains(u, "https://") {
+		return u
+	} else {
+		return fmt.Sprintf("http://%s", u)
 	}
 }
