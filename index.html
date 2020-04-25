@@ -82,6 +82,7 @@
                 success: function (resp) {
                     resp = convertToChartData(resp, "count", "y");
                     resp = convertToChartData(resp, "city", "label");
+                    //TODO add table representation
                     drawChart(resp);
                 },
                 fail: function () {
