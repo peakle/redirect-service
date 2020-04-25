@@ -26,10 +26,11 @@ type StatResponse struct {
 	Useragent string `json:"useragent"`
 	Ip        string `json:"ip"`
 	City      string `json:"city"`
-	CreatedAt string `json:"created_at"`
+	Date      string `json:"date"`
+	Count     string `json:"count"`
 }
 
-func (m *SQLManager) RecordStats(ip, useragent, city string) {
+func (m *SQLManager) RecordStats(ip, useragent, city, token string) {
 	const TableName = "stats"
 
 	now := time.Now().Format("2006-01-02")
@@ -41,6 +42,7 @@ func (m *SQLManager) RecordStats(ip, useragent, city string) {
 			"useragent",
 			"ip",
 			"city",
+			"token",
 			"created_at",
 		},
 		IsIgnore: true,
@@ -51,6 +53,7 @@ func (m *SQLManager) RecordStats(ip, useragent, city string) {
 		useragent,
 		ip,
 		city,
+		token,
 		now,
 	})
 
@@ -63,12 +66,13 @@ func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatRespon
 			s.useragent,
 			s.ip,
 			s.city,
-			s.created_at
+		    COUNT(*) as count
 		FROM stats s
 		JOIN redirects r on r.token = s.token 
 		WHERE 1
 			and r.token = ?
 			and r.user_id = ?
+		GROUP BY city
 	`
 
 	rows, err := m.conn.Query(query, token, userId)
@@ -83,7 +87,7 @@ func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatRespon
 	var resp []StatResponse
 	for rows.Next() {
 		var r StatResponse
-		err = rows.Scan(&r.Useragent, &r.Ip, &r.City, &r.CreatedAt)
+		err = rows.Scan(&r.Useragent, &r.Ip, &r.City, &r.Count)
 		if err != nil {
 			return []StatResponse{}, err
 		}
@@ -94,7 +98,7 @@ func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatRespon
 	return resp, nil
 }
 
-func (m *SQLManager) FindUrl(token string) (string, error) {
+func (m *SQLManager) FindUrlByToken(token string) (string, error) {
 	query := `
 		SELECT r.url
 		FROM redirects r
@@ -138,9 +142,9 @@ func (m *SQLManager) InsertToken(userId, uri, token string) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 
 	data.Add([]string{
-		idgen.Id(),
 		token,
 		uri,
+		userId,
 		now,
 	})
 
@@ -215,7 +219,10 @@ func (m *SQLManager) insert(dataInsert *sg.InsertData) int {
 		return 0
 	}
 
-	ra, _ := result.RowsAffected()
+	ra, err := result.RowsAffected()
+	if err != nil {
+		handleErr(err)
+	}
 
 	return int(ra)
 }

@@ -13,69 +13,75 @@
             map[n['name']] = n['value'];
         });
 
-        return JSON.stringify(map);
+        return map;
+    }
+
+    function convertToChartData(objectList, from, to) {
+        $.map(objectList, function (obj) {
+            obj[to] = obj[from]
+        });
+        return objectList;
     }
 
     window.onload = function () {
-        let stats = $("#stats");
-        let main = $("#main");
-        let mainBlock = $("#main-block");
-        let statsBlock = $("#stats-block");
+        let $stats = $("#stats");
+        let $main = $("#main");
+        let $mainBlock = $("#main-block");
+        let $statsBlock = $("#stats-block");
 
         //render stats
-        stats.click(function (e) {
+        $stats.click(function (e) {
             e.preventDefault();
 
-            mainBlock.hide();
-            main.removeClass("active");
+            $mainBlock.hide();
+            $main.removeClass("active");
 
-            statsBlock.show();
-            stats.addClass("active");
+            $statsBlock.show();
+            $stats.addClass("active");
         });
 
         //render main page
-        main.click(function (e) {
+        $main.click(function (e) {
             e.preventDefault();
 
-            statsBlock.hide();
-            stats.removeClass("active");
+            $statsBlock.hide();
+            $stats.removeClass("active");
 
-            mainBlock.show();
-            main.addClass("active");
+            $mainBlock.show();
+            $main.addClass("active");
         });
 
-        $("#stats-form").submit(function () {
+        $("#stats-form").submit(function (e) {
+            e.preventDefault();
             let drawChart = function (dataPoints) {
-                console.log(dataPoints);
-                return;
                 let options = {
-                    title: {
-                        text: "Статистика посещений"
-                    },
+                    theme: "light2",
+                    exportEnabled: true,
                     animationEnabled: true,
                     data: [{
                         type: "pie",
                         startAngle: 40,
-                        toolTipContent: "<b>{label}</b>: {y}%",
+                        toolTipContent: "<b>{label}</b>: {y}",
                         showInLegend: "true",
                         legendText: "{label}",
                         indexLabelFontSize: 16,
-                        indexLabel: "{label} - {y}%",
+                        indexLabel: "{label} - {y}",
                         dataPoints: dataPoints
                     }]
                 };
 
-                statsBlock.hide();
-                let chart = $("#chartContainer");
-                chart.show();
-                chart.CanvasJSChart(options);
+                $("#chartContainer").show();
+                let chart = new CanvasJS.Chart("chartContainer", options);
+                chart.render()
             };
 
             $.ajax({
                 url: "/stats",
                 method: "post",
-                data: getFormDataInJson($(this).serializeArray()),
+                data: JSON.stringify(getFormDataInJson($(this).serializeArray())),
                 success: function (resp) {
+                    resp = convertToChartData(resp, "count", "y");
+                    resp = convertToChartData(resp, "city", "label");
                     drawChart(resp);
                 },
                 fail: function () {
@@ -86,18 +92,24 @@
 
         $("#main-form").submit(function (e) {
             e.preventDefault();
+            let data = getFormDataInJson($(this).serializeArray());
+            if (!data.external_url.includes("http://") && !data.external_url.includes("https://")) {
+                data.external_url = 'http://' + data.external_url;
+            }
+
             $.ajax({
                 url: "/creation",
                 method: "post",
                 contentType: 'application/json;charset=UTF-8',
-                data: getFormDataInJson($(this).serializeArray()),
+                data: JSON.stringify(data),
                 success: function (resp) {
                     let r = JSON.parse(resp);
                     if (r.code !== 0) {
                         alert(r.text);
-						return;
-					}
+                        return;
+                    }
                     //TODO green bubble with response text
+                    alert(r.text);
                 },
                 fail: function () {
                     location.reload()
@@ -126,7 +138,7 @@
 					<div class="input-group-prepend">
 						<div class="input-group-text">http://</div>
 					</div>
-					<input type="url" class="form-control" id="external_url" name="external_url"
+					<input type="text" class="form-control" id="external_url" name="external_url"
 						   placeholder="Твой url" required>
 				</div>
 				<button type="submit" id="submit_form" class="btn btn-primary mb-2">Создать</button>
@@ -134,20 +146,20 @@
 		</div>
 	</div>
 	<div class="card-body text-center" id="stats-block" style="display: none">
-		<h5 class="card-title">Статистика</h5>
+		<h5 class="card-title">Статистика посещений</h5>
 		<div class="d-flex justify-content-center">
 			<form class="form-inline" id="stats-form">
 				<div class="form-group input-group mx-sm-3 mb-2">
-					<input type="text" class="form-control" name="external_url"
-						   placeholder="Поиск по url" required>
-
+					<input type="text" class="form-control" name="token" id="token"
+						   placeholder="Поиск по токену" required>
 					<div class="input-group-append">
 						<button type="submit" class="input-group-text btn btn-primary">Поиск</button>
 					</div>
 				</div>
 			</form>
-			<div id="chartContainer" style="height: 300px; width: 100%; display: none"></div>
 		</div>
+		<div id="chartContainer" style="height: 300px; width: 100%; display: none"></div>
+		<div id="fullTable"></div>
 	</div>
 </div>
 </body>

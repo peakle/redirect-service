@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/oschwald/geoip2-golang"
@@ -18,10 +19,10 @@ type EntryDto struct {
 }
 
 var (
-	db          *geoip2.Reader
-	mRead       *provider.SQLManager
-	mWrite      *provider.SQLManager
-	uriReplacer = strings.NewReplacer(
+	db        *geoip2.Reader
+	mRead     *provider.SQLManager
+	mWrite    *provider.SQLManager
+	validator = strings.NewReplacer(
 		"*", "",
 		"<", "",
 		">", "",
@@ -36,9 +37,10 @@ var (
 )
 
 const (
-	ErrorMessage = `{"code":1,"text":"please reload page and try again"}`
-	JsonResponse = `{"code":"%d","text":"%s"}`
-	FrontPage    = "./index.html"
+	ErrorMessage  = `{"code":1,"text":"please reload page and try again"}`
+	JsonResponse  = `{"code":"%d","text":"%s"}`
+	FrontPage     = "./index.html"
+	UndefinedCity = "неизвестно"
 )
 
 func StartServer(c *cli.Context) {
@@ -63,9 +65,9 @@ func StartServer(c *cli.Context) {
 		case "/":
 			handleFront(ctx)
 		case "/creation":
-			handleCreateToken(ctx)
+			handleCreateToken(ctx, hostname)
 		case "/stats":
-			handleStats(ctx)
+			handleStats(ctx, hostname)
 		default:
 			if strings.Contains(path, "favicon.ico") {
 				return
@@ -94,7 +96,7 @@ func handleFront(ctx *fasthttp.RequestCtx) {
 	ctx.SendFile(FrontPage)
 }
 
-func handleStats(ctx *fasthttp.RequestCtx) {
+func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 	var (
 		err      error
 		entryDto EntryDto
@@ -111,10 +113,22 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	if entryDto.UserId == "" {
 		entryDto.UserId = "1"
 	} else {
-		entryDto.UserId = uriReplacer.Replace(entryDto.UserId)
+		entryDto.UserId = validator.Replace(entryDto.UserId)
 	}
 
-	stats, err := mRead.FindUrlByTokenAndUserId(entryDto.UserId, uriReplacer.Replace(entryDto.Token))
+	var (
+		u     *url.URL
+		token string
+	)
+
+	u, err = url.Parse(entryDto.Token)
+	if err == nil && u.Path != "" {
+		token = validator.Replace(strings.TrimLeft(u.Path, "/"))
+	} else {
+		entryDto.Token = validateAndFixUrl(entryDto.Token)
+	}
+
+	stats, err := mRead.FindUrlByTokenAndUserId(entryDto.UserId, token)
 	if err != nil {
 		fmt.Printf("error occurred on handle stats: %v, entryDto: %v \r\n", err, entryDto)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
@@ -135,7 +149,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	_, _ = fmt.Fprintf(ctx, string(r))
 }
 
-func handleCreateToken(ctx *fasthttp.RequestCtx) {
+func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	var (
 		token    string
 		err      error
@@ -153,7 +167,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx) {
 	if entryDto.UserId == "" {
 		entryDto.UserId = "1"
 	} else {
-		entryDto.UserId = uriReplacer.Replace(entryDto.UserId)
+		entryDto.UserId = validator.Replace(entryDto.UserId)
 	}
 
 	entryDto.Url = validateAndFixUrl(entryDto.Url)
@@ -173,14 +187,16 @@ func handleCreateToken(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(JsonResponse, 0, token))
+	redirectUri := fmt.Sprintf(`%s/%s`, hostname, token)
+	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(JsonResponse, 0, redirectUri))
 }
 
 func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var err error
-	var redirectUri string
+	var token, redirectUri string
 
-	redirectUri, err = mRead.FindUrl(uriReplacer.Replace(path))
+	token = strings.TrimLeft(validator.Replace(path), "/")
+	redirectUri, err = mRead.FindUrlByToken(token)
 	if err != nil {
 		fmt.Printf("error occurred on find url: %v \r\n", err)
 		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
@@ -206,14 +222,16 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var v string
 	var isSet bool
 	if v, isSet = city.City.Names["ru"]; isSet {
-		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), city.Country.Names["ru"]+" "+v)
+		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), city.Country.Names["ru"]+" "+v, token)
 	} else if v, isSet = city.Country.Names["ru"]; isSet {
-		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v)
+		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v, token)
+	} else {
+		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), UndefinedCity, token)
 	}
 }
 
 func validateAndFixUrl(u string) string {
-	u = uriReplacer.Replace(u)
+	u = validator.Replace(u)
 
 	if strings.Contains(u, "http://") || strings.Contains(u, "https://") {
 		return u

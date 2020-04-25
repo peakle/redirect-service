@@ -9,8 +9,8 @@ import (
 
 var (
 	Hostname   = "http://localhost:443"
-	WriteUser  = "root:root"
-	ReadUser   = "root:root"
+	WriteUser  = "root:root_pass"
+	ReadUser   = "root:root_pass"
 	commands   = []cli.Command{
 		{
 			Name:        "server",

@@ -1,5 +1,7 @@
 CREATE DATABASE IF NOT EXISTS `rds`;
 
+USE `rds`;
+
 CREATE USER IF NOT EXISTS 'write_user'@'%' IDENTIFIED BY '';
 GRANT INSERT ON *.* TO 'write_user'@'%';
 
@@ -21,11 +23,11 @@ CREATE TABLE IF NOT EXISTS redirects
 
 CREATE TABLE IF NOT EXISTS stats
 (
-    id         int          not null
+    id         bigint unsigned not null
         primary key,
-    useragent  varchar(255) null,
-    ip         varchar(40)  not null,
-    city       varchar(100) null,
-    created_at datetime     not null,
-    token      varchar(100) null
+    useragent  varchar(255)    null,
+    ip         varchar(40)     not null,
+    city       varchar(100)    null,
+    created_at datetime        not null,
+    token      varchar(100)    null
 );
