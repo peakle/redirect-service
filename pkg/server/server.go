@@ -12,9 +12,10 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
 )
 
+// EntryDto struct for parse entry request
 type EntryDto struct {
-	Url    string `json:"external_url"`
-	UserId string `json:"user_id"`
+	URL    string `json:"external_url"`
+	UserID string `json:"user_id"`
 	Token  string `json:"token"`
 }
 
@@ -37,9 +38,13 @@ var (
 )
 
 const (
-	ErrorMessage  = `{"code":1,"text":"please reload page and try again"}`
-	JsonResponse  = `{"code":"%d","text":"%s"}`
-	FrontPage     = "./index.html"
+	// ErrorMessage for send client if something goes wrong
+	ErrorMessage = `{"code":1,"text":"please reload page and try again"}`
+	// JSONResponse for send client response with redirect url
+	JSONResponse = `{"code":"%d","text":"%s"}`
+	// FrontPage name for return static html
+	FrontPage = "./index.html"
+	// UndefinedCity city name if we cant define city name by ip
 	UndefinedCity = "неизвестно"
 )
 
@@ -110,10 +115,10 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	if entryDto.UserId == "" {
-		entryDto.UserId = "1"
+	if entryDto.UserID == "" {
+		entryDto.UserID = "1"
 	} else {
-		entryDto.UserId = validator.Replace(entryDto.UserId)
+		entryDto.UserID = validator.Replace(entryDto.UserID)
 	}
 
 	var (
@@ -128,7 +133,7 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 		entryDto.Token = validateAndFixUrl(entryDto.Token)
 	}
 
-	stats, err := mRead.FindUrlByTokenAndUserId(entryDto.UserId, token)
+	stats, err := mRead.FindUrlByTokenAndUserId(entryDto.UserID, token)
 	if err != nil {
 		fmt.Printf("error occurred on handle stats: %v, entryDto: %v \r\n", err, entryDto)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
@@ -164,14 +169,14 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	if entryDto.UserId == "" {
-		entryDto.UserId = "1"
+	if entryDto.UserID == "" {
+		entryDto.UserID = "1"
 	} else {
-		entryDto.UserId = validator.Replace(entryDto.UserId)
+		entryDto.UserID = validator.Replace(entryDto.UserID)
 	}
 
-	entryDto.Url = validateAndFixUrl(entryDto.Url)
-	token, err = mRead.Create(entryDto.Url)
+	entryDto.URL = validateAndFixUrl(entryDto.URL)
+	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
 		fmt.Printf("error occurred on create token: %v, entryDto: %v \r\n", err, entryDto)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
@@ -179,7 +184,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	err = mWrite.InsertToken(entryDto.UserId, entryDto.Url, token)
+	err = mWrite.InsertToken(entryDto.UserID, entryDto.URL, token)
 	if err != nil {
 		fmt.Printf("error occurred on insert token: %v, provided data: entryDto: %v, token: %s \r\n", err, entryDto, token)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
@@ -187,22 +192,23 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	redirectUri := fmt.Sprintf(`%s/%s`, hostname, token)
-	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(JsonResponse, 0, redirectUri))
+	redirectURI := fmt.Sprintf(`%s/%s`, hostname, token)
+
+	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(JSONResponse, 0, redirectURI))
 }
 
 func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var err error
-	var token, redirectUri string
+	var token, redirectURI string
 
 	token = strings.TrimLeft(validator.Replace(path), "/")
-	redirectUri, err = mRead.FindUrlByToken(token)
+	redirectURI, err = mRead.FindUrlByToken(token)
 	if err != nil {
 		fmt.Printf("error occurred on find url: %v \r\n", err)
-		redirectUri = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
+		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
 	}
 
-	ctx.Response.Header.Set("Location", redirectUri)
+	ctx.Response.Header.Set("Location", redirectURI)
 	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
 
 	ctx.Response.SetStatusCode(302)
@@ -235,7 +241,7 @@ func validateAndFixUrl(u string) string {
 
 	if strings.Contains(u, "http://") || strings.Contains(u, "https://") {
 		return u
-	} else {
-		return fmt.Sprintf("http://%s", u)
 	}
+
+	return fmt.Sprintf("http://%s", u)
 }
