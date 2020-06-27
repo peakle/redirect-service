@@ -122,13 +122,13 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 	}
 
 	var (
-		u     *url.URL
+		uri   *url.URL
 		token string
 	)
 
-	u, err = url.Parse(entryDto.Token)
-	if err == nil && u.Path != "" {
-		token = validator.Replace(strings.TrimLeft(u.Path, "/"))
+	uri, err = url.Parse(entryDto.Token)
+	if err == nil && uri.Path != "" {
+		token = validator.Replace(strings.TrimLeft(uri.Path, "/"))
 	} else {
 		entryDto.Token = validateAndFixUrl(entryDto.Token)
 	}
@@ -236,12 +236,12 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	}
 }
 
-func validateAndFixUrl(u string) string {
-	u = validator.Replace(u)
+func validateAndFixUrl(uri string) string {
+	uri = validator.Replace(uri)
 
-	if strings.Contains(u, "http://") || strings.Contains(u, "https://") {
-		return u
+	if strings.Contains(uri, "http://") || strings.Contains(uri, "https://") {
+		return uri
 	}
 
-	return fmt.Sprintf("http://%s", u)
+	return fmt.Sprintf("http://%s", uri)
 }
