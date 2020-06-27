@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	idgen "github.com/wakeapp/go-id-generator"
-	sg "github.com/wakeapp/go-sql-generator"
 	"os"
 	"time"
+
+	idgen "github.com/wakeapp/go-id-generator"
+	sg "github.com/wakeapp/go-sql-generator"
 )
 
 type SQLManager struct {
@@ -24,12 +24,13 @@ type config struct {
 
 type StatResponse struct {
 	Useragent string `json:"useragent"`
-	Ip        string `json:"ip"`
+	IP        string `json:"ip"`
 	City      string `json:"city"`
 	Date      string `json:"date"`
 	Count     string `json:"count"`
 }
 
+// RecordStats about entry
 func (m *SQLManager) RecordStats(ip, useragent, city, token string) {
 	const TableName = "stats"
 
@@ -60,7 +61,8 @@ func (m *SQLManager) RecordStats(ip, useragent, city, token string) {
 	m.insert(dataInsert)
 }
 
-func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatResponse, error) {
+// FindURLByTokenAndUserID export statistic about entries
+func (m *SQLManager) FindURLByTokenAndUserID(userID, token string) ([]StatResponse, error) {
 	query := `
 		SELECT
 			s.useragent,
@@ -75,19 +77,15 @@ func (m *SQLManager) FindUrlByTokenAndUserId(userId, token string) ([]StatRespon
 		GROUP BY city
 	`
 
-	rows, err := m.conn.Query(query, token, userId)
+	rows, err := m.conn.Query(query, token, userID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return []StatResponse{}, nil
-		}
-
 		return []StatResponse{}, err
 	}
 
 	var resp []StatResponse
 	for rows.Next() {
 		var r StatResponse
-		err = rows.Scan(&r.Useragent, &r.Ip, &r.City, &r.Count)
+		err = rows.Scan(&r.Useragent, &r.IP, &r.City, &r.Count)
 		if err != nil {
 			return []StatResponse{}, err
 		}
@@ -112,19 +110,15 @@ func (m *SQLManager) FindUrlByToken(token string) (string, error) {
 	var r string
 	err := row.Scan(&r)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "https://ya.ru", nil
-		}
-
 		return "", err
 	}
 
 	return r, nil
 }
 
-func (m *SQLManager) InsertToken(userId, uri, token string) error {
-	if isEmpty(userId) || isEmpty(uri) || isEmpty(token) {
-		return errors.New(fmt.Sprintf("null param provided: userId %s, uri %s, token %s", userId, uri, token))
+func (m *SQLManager) InsertToken(userID, uri, token string) error {
+	if isEmpty(userID) || isEmpty(uri) || isEmpty(token) {
+		return fmt.Errorf("null param provided: userID %s, uri %s, token %s", userID, uri, token)
 	}
 
 	const TableName = "redirects"
@@ -144,7 +138,7 @@ func (m *SQLManager) InsertToken(userId, uri, token string) error {
 	data.Add([]string{
 		token,
 		uri,
-		userId,
+		userID,
 		now,
 	})
 

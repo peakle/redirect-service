@@ -2,16 +2,18 @@ package main
 
 import (
 	"fmt"
+	"os"
+
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/urfave/cli"
 	"gitlab.com/Peakle/redirect-service/pkg/server"
-	"os"
 )
 
 var (
-	Hostname   = "http://localhost:443"
-	WriteUser  = "root:root_pass"
-	ReadUser   = "root:root_pass"
-	commands   = []cli.Command{
+	Hostname  = "http://localhost:443"
+	WriteUser = "root:root_pass"
+	ReadUser  = "root:root_pass"
+	commands  = []cli.Command{
 		{
 			Name:        "server",
 			Description: "starts redirect server",
@@ -26,9 +28,9 @@ func main() {
 	app.Name = "rds"
 	app.Commands = commands
 	app.Metadata = map[string]interface{}{
-		"Hostname": Hostname,
+		"Hostname":  Hostname,
 		"WriteUser": WriteUser,
-		"ReadUser": ReadUser,
+		"ReadUser":  ReadUser,
 	}
 
 	err := app.Run(os.Args)

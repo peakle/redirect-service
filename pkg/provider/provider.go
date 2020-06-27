@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"regexp"
+	"strings"
 	"time"
 )
 
-const CreationError = "creation error"
-
 func (m *SQLManager) Create(uri string) (string, error) {
+	const CreationError = "creation error"
+
 	var err error
 	_, err = url.ParseRequestURI(uri)
 	if err != nil {
@@ -24,6 +24,7 @@ func (m *SQLManager) Create(uri string) (string, error) {
 	for i := 0; ; i++ {
 		rand.Read(r)
 		t = fmt.Sprintf("%x", r)
+
 		if !m.TokenExist(t) {
 			break
 		}
@@ -38,7 +39,5 @@ func (m *SQLManager) Create(uri string) (string, error) {
 }
 
 func isEmpty(str string) bool {
-	regex := regexp.MustCompile(`(?m)\s+`)
-
-	return regex.ReplaceAllString(str, "") == ""
+	return strings.TrimSpace(str) == ""
 }

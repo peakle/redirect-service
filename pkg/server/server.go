@@ -133,7 +133,7 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 		entryDto.Token = validateAndFixUrl(entryDto.Token)
 	}
 
-	stats, err := mRead.FindUrlByTokenAndUserId(entryDto.UserID, token)
+	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
 	if err != nil {
 		fmt.Printf("error occurred on handle stats: %v, entryDto: %v \r\n", err, entryDto)
 		_, _ = fmt.Fprintf(ctx, ErrorMessage)
