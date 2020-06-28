@@ -9,11 +9,13 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/server"
 )
 
+// TODO delete global vars
 var (
-	Hostname  = "http://localhost:443"
-	WriteUser = "root:root_pass"
-	ReadUser  = "root:root_pass"
-	commands  = []cli.Command{
+	Hostname   = "http://localhost:443"
+	WriteUser  = "root:root_pass"
+	ReadUser   = "root:root_pass"
+	ProjectDir = "/"
+	commands   = []cli.Command{
 		{
 			Name:        "server",
 			Description: "starts redirect server",
@@ -24,8 +26,6 @@ var (
 )
 
 func main() {
-	projectDir, _ := os.Getwd()
-
 	app := cli.NewApp()
 	app.Name = "rds"
 	app.Commands = commands
@@ -33,7 +33,7 @@ func main() {
 		"Hostname":   Hostname,
 		"WriteUser":  WriteUser,
 		"ReadUser":   ReadUser,
-		"ProjectDir": projectDir,
+		"ProjectDir": ProjectDir,
 	}
 
 	err := app.Run(os.Args)

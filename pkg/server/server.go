@@ -60,16 +60,17 @@ func StartServer(c *cli.Context) {
 
 	var hostname, path string
 	hostname = c.App.Metadata["Hostname"].(string)
+	front := projectDir + "/" + frontPage
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		path = string(ctx.Path())
 		switch path {
 		case "/":
-			handleFront(ctx, projectDir+"/"+frontPage)
+			handleFront(ctx, front)
 		case "/creation":
 			handleCreateToken(ctx, hostname)
 		case "/stats":
-			handleStats(ctx, hostname)
+			handleStats(ctx)
 		default:
 			if strings.Contains(path, "favicon.ico") {
 				return
@@ -89,7 +90,7 @@ func handleFront(ctx *fasthttp.RequestCtx, page string) {
 	ctx.SendFile(page)
 }
 
-func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
+func handleStats(ctx *fasthttp.RequestCtx) {
 	var (
 		err      error
 		entryDto EntryDto
@@ -118,7 +119,7 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 	if err == nil && uri.Path != "" {
 		token = validator.Replace(strings.TrimLeft(uri.Path, "/"))
 	} else {
-		entryDto.Token = validateAndFixUrl(entryDto.Token)
+		entryDto.Token = validateAndFixURL(entryDto.Token)
 	}
 
 	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
@@ -163,7 +164,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		entryDto.UserID = validator.Replace(entryDto.UserID)
 	}
 
-	entryDto.URL = validateAndFixUrl(entryDto.URL)
+	entryDto.URL = validateAndFixURL(entryDto.URL)
 	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
 		fmt.Printf("error occurred on create token: %v, entryDto: %v \r\n", err, entryDto)
@@ -224,7 +225,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	}
 }
 
-func validateAndFixUrl(uri string) string {
+func validateAndFixURL(uri string) string {
 	uri = validator.Replace(uri)
 
 	if strings.Contains(uri, "http://") || strings.Contains(uri, "https://") {
