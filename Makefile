@@ -21,9 +21,6 @@ release: clean
 		-o ${APP_NAME} ./cmd/main.go
 	@chmod +x ${APP_NAME}
 	@echo ">> deploy..."
-	@scp -P 22 ${APP_NAME} GeoIP2.mmdb index.html ${USERNAME}@${HOSTNAME}:${APP_DIR}
-	@ssh ${USERNAME}@${HOSTNAME} 'rm -f ${APP_DIR}/.env; \
-		echo MYSQL_HOST=${MYSQL_HOST} > ${APP_DIR}/.env; \
-		echo MYSQL_DATABASE=${MYSQL_DATABASE} >> ${APP_DIR}/.env; \
-		source ${APP_DIR}/.env'
-	@ssh ${USERNAME}@${HOSTNAME} 'supervisorctl restart'
+	@rsync -ve ssh --progress ${APP_NAME} GeoIP2.mmdb index.html ${USERNAME}@${HOSTNAME}:${APP_DIR}
+	@ssh ${USERNAME}@${HOSTNAME} 'export MYSQL_HOST=${MYSQL_HOST} && export MYSQL_DATABASE=${MYSQL_DATABASE}'
+	@ssh ${USERNAME}@${HOSTNAME} 'supervisorctl restart rds-server:'

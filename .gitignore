@@ -3,3 +3,4 @@ GeoIP2.mmdb
 .env
 docker/.data
 supervisor.conf
+rds
