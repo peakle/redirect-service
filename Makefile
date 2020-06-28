@@ -26,4 +26,4 @@ release: clean
 		echo MYSQL_HOST=${MYSQL_HOST} > ${APP_DIR}/.env; \
 		echo MYSQL_DATABASE=${MYSQL_DATABASE} >> ${APP_DIR}/.env; \
 		source ${APP_DIR}/.env'
-	@ssh -f ${USERNAME}@${HOSTNAME} ${APP_DIR}/${APP_NAME} server
+	@ssh ${USERNAME}@${HOSTNAME} 'supervisorctl restart'
