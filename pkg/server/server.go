@@ -82,16 +82,7 @@ func StartServer(c *cli.Context) {
 		}
 	}
 
-	go fasthttp.ListenAndServe(":80", func(ctx *fasthttp.RequestCtx) {
-		ctx.Response.Header.Set("Location", hostname+string(ctx.Path()))
-		ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
-
-		ctx.Response.SetStatusCode(302)
-
-		fmt.Println(ctx)
-	})
-
-	err = fasthttp.ListenAndServe(":443", requestHandler)
+	err = fasthttp.ListenAndServe(":8080", requestHandler)
 	if err != nil {
 		fmt.Println(err)
 	}
