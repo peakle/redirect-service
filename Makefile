@@ -5,7 +5,7 @@ GOARCH=amd64
 
 clean:
 	@echo ">> cleaning..."
-	@rm ${APP_NAME}
+	@rm -f ${APP_NAME}
 
 build: clean
 	@echo ">> building..."
