@@ -24,13 +24,16 @@ var (
 )
 
 func main() {
+	projectDir, _ := os.Getwd()
+
 	app := cli.NewApp()
 	app.Name = "rds"
 	app.Commands = commands
 	app.Metadata = map[string]interface{}{
-		"Hostname":  Hostname,
-		"WriteUser": WriteUser,
-		"ReadUser":  ReadUser,
+		"Hostname":   Hostname,
+		"WriteUser":  WriteUser,
+		"ReadUser":   ReadUser,
+		"ProjectDir": projectDir,
 	}
 
 	err := app.Run(os.Args)

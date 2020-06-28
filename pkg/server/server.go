@@ -38,14 +38,10 @@ var (
 )
 
 const (
-	// ErrorMessage for send client if something goes wrong
-	ErrorMessage = `{"code":1,"text":"please reload page and try again"}`
-	// JSONResponse for send client response with redirect url
-	JSONResponse = `{"code":"%d","text":"%s"}`
-	// FrontPage name for return static html
-	FrontPage = "./index.html"
-	// UndefinedCity city name if we cant define city name by ip
-	UndefinedCity = "неизвестно"
+	errorMessage  = `{"code":1,"text":"please reload page and try again"}`
+	jsonResponse  = `{"code":"%d","text":"%s"}`
+	frontPage     = "index.html"
+	undefinedCity = "неизвестно"
 )
 
 func StartServer(c *cli.Context) {
@@ -56,6 +52,7 @@ func StartServer(c *cli.Context) {
 	db, err = geoip2.Open("GeoIP2.mmdb")
 	defer db.Close()
 
+	projectDir := c.App.Metadata["ProjectDir"].(string)
 	mRead = provider.InitManager(c.App.Metadata["ReadUser"].(string))
 	mWrite = provider.InitManager(c.App.Metadata["WriteUser"].(string))
 	defer mRead.Close()
@@ -68,7 +65,7 @@ func StartServer(c *cli.Context) {
 		path = string(ctx.Path())
 		switch path {
 		case "/":
-			handleFront(ctx)
+			handleFront(ctx, projectDir+"/"+frontPage)
 		case "/creation":
 			handleCreateToken(ctx, hostname)
 		case "/stats":
@@ -88,8 +85,8 @@ func StartServer(c *cli.Context) {
 	}
 }
 
-func handleFront(ctx *fasthttp.RequestCtx) {
-	ctx.SendFile(FrontPage)
+func handleFront(ctx *fasthttp.RequestCtx, page string) {
+	ctx.SendFile(page)
 }
 
 func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
@@ -101,7 +98,7 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
 		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
-		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
 	}
@@ -127,7 +124,7 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
 	if err != nil {
 		fmt.Printf("error occurred on handle stats: %v, entryDto: %v \r\n", err, entryDto)
-		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
 	}
@@ -136,7 +133,7 @@ func handleStats(ctx *fasthttp.RequestCtx, hostname string) {
 	r, err = json.Marshal(stats)
 	if err != nil {
 		fmt.Printf("error occurred on handle stats format json: %v, entryDto: %v \r\n", err, entryDto)
-		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
 	}
@@ -155,7 +152,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
 		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
-		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
 	}
@@ -170,7 +167,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
 		fmt.Printf("error occurred on create token: %v, entryDto: %v \r\n", err, entryDto)
-		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
 	}
@@ -178,14 +175,14 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	err = mWrite.InsertToken(entryDto.UserID, entryDto.URL, token)
 	if err != nil {
 		fmt.Printf("error occurred on insert token: %v, provided data: entryDto: %v, token: %s \r\n", err, entryDto, token)
-		_, _ = fmt.Fprintf(ctx, ErrorMessage)
+		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
 	}
 
 	redirectURI := fmt.Sprintf(`%s/%s`, hostname, token)
 
-	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(JSONResponse, 0, redirectURI))
+	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(jsonResponse, 0, redirectURI))
 }
 
 func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
@@ -223,7 +220,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	} else if v, isSet = city.Country.Names["ru"]; isSet {
 		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v, token)
 	} else {
-		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), UndefinedCity, token)
+		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), undefinedCity, token)
 	}
 }
 
