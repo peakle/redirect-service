@@ -4,3 +4,5 @@ GeoIP2.mmdb
 docker/.data
 supervisor.conf
 rds
+certificate_ca.crt
+key.pem

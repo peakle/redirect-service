@@ -44,6 +44,7 @@ const (
 	undefinedCity = "неизвестно"
 )
 
+// StartServer - starts redirect server
 func StartServer(c *cli.Context) {
 	var err error
 
@@ -80,7 +81,19 @@ func StartServer(c *cli.Context) {
 		}
 	}
 
-	err = fasthttp.ListenAndServe(":8080", requestHandler)
+	go fasthttp.ListenAndServe(":80", func(ctx *fasthttp.RequestCtx) {
+		ctx.Response.Header.Set("Location", hostname+string(ctx.Path()))
+		ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
+
+		ctx.Response.SetStatusCode(302)
+
+		fmt.Println(ctx)
+	})
+
+	certFile := projectDir + "/certificate.crt"
+	keyFile := projectDir + "/key.pem"
+
+	err = fasthttp.ListenAndServeTLS(":8080", certFile, keyFile, requestHandler)
 	if err != nil {
 		fmt.Println(err)
 	}
