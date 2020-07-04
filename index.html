@@ -38,6 +38,8 @@
             const viewerID = {{.viewerID}};
             const apiID = {{.apiID}};
 
+            const apiURLParams = `?auth_key=${{authKey}}&viewer_id=${{viewerID}}&api_id=${{apiID}}`
+
             //render stats
             $stats.click(function (e) {
                 e.preventDefault();
@@ -88,7 +90,7 @@
                 formMap['token'] = authKey
 
                 $.ajax({
-                    url: "/stats",
+                    url: "/stats" + apiURLParams,
                     method: "post",
                     data: JSON.stringify(getFormDataInJson(formMap)),
                     success: function (resp) {
@@ -114,7 +116,7 @@
                 }
 
                 $.ajax({
-                    url: "/creation",
+                    url: "/creation"+ apiURLParams,
                     method: "post",
                     contentType: 'application/json;charset=UTF-8',
                     data: JSON.stringify(data),
