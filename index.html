@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>Статистика редиректов</title>
+    <title>Создание редиректа</title>
     <meta charset="UTF-8">
 </head>
 
@@ -34,6 +34,9 @@
             let $mainBlock = $("#main-block");
             let $statsBlock = $("#stats-block");
 
+            const StatsTitle = "Статистика редиректов"
+            const CreationTitle = "Создание редиректа"
+
             const authKey = {{.authKey}};
             const viewerID = {{.viewerID}};
             const apiID = {{.apiID}};
@@ -49,6 +52,8 @@
 
                 $statsBlock.show();
                 $stats.addClass("active");
+
+                document.title = StatsTitle
             });
 
             //render main page
@@ -60,6 +65,8 @@
 
                 $mainBlock.show();
                 $main.addClass("active");
+
+                document.title = CreationTitle
             });
 
             $("#stats-form").submit(function (e) {
