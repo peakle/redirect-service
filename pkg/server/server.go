@@ -81,7 +81,7 @@ func StartServer(c *cli.Context) {
 		}
 	}
 
-	go fasthttp.ListenAndServe(":80", func(ctx *fasthttp.RequestCtx) {
+	go fasthttp.ListenAndServe(":8080", func(ctx *fasthttp.RequestCtx) {
 		ctx.Response.Header.Set("Location", hostname+string(ctx.Path()))
 		ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
 
@@ -93,7 +93,7 @@ func StartServer(c *cli.Context) {
 	certFile := projectDir + "/certificate.crt"
 	keyFile := projectDir + "/key.pem"
 
-	err = fasthttp.ListenAndServeTLS(":8080", certFile, keyFile, requestHandler)
+	err = fasthttp.ListenAndServeTLS(":8443", certFile, keyFile, requestHandler)
 	if err != nil {
 		fmt.Println(err)
 	}
