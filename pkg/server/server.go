@@ -170,7 +170,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	if err == nil && uri.Path != "" {
 		token = validator.Replace(strings.TrimLeft(uri.Path, "/"))
 	} else {
-		entryDto.Token = validateAndFixURL(entryDto.Token)
+		entryDto.Token = validateRedirectURL(entryDto.Token)
 	}
 
 	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
@@ -215,7 +215,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 
 	entryDto.UserID = validator.Replace(entryDto.UserID)
 
-	entryDto.URL = validateAndFixURL(entryDto.URL)
+	entryDto.URL = validateRedirectURL(entryDto.URL)
 	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
 		fmt.Printf("error occurred on create token: %v, entryDto: %v \r\n", err, entryDto)
@@ -276,7 +276,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	}
 }
 
-func validateAndFixURL(uri string) string {
+func validateRedirectURL(uri string) string {
 	uri = validator.Replace(uri)
 
 	if strings.Contains(uri, "http://") || strings.Contains(uri, "https://") {
