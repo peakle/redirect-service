@@ -11,6 +11,7 @@ import (
 	sg "github.com/wakeapp/go-sql-generator"
 )
 
+// SQLManager db manager provide ability to call SQL methods
 type SQLManager struct {
 	conn *sql.DB
 }
@@ -22,6 +23,7 @@ type config struct {
 	DBName   string
 }
 
+// StatResponse response for `stats` route
 type StatResponse struct {
 	Useragent string `json:"useragent"`
 	IP        string `json:"ip"`
@@ -74,7 +76,7 @@ func (m *SQLManager) FindURLByTokenAndUserID(userID, token string) ([]StatRespon
 		WHERE 1
 			and r.token = ?
 			and r.user_id = ?
-		GROUP BY city
+		GROUP BY s.city
 	`
 
 	rows, err := m.conn.Query(query, token, userID)
@@ -96,7 +98,8 @@ func (m *SQLManager) FindURLByTokenAndUserID(userID, token string) ([]StatRespon
 	return resp, nil
 }
 
-func (m *SQLManager) FindUrlByToken(token string) (string, error) {
+// FindURLByToken find redirect url by token
+func (m *SQLManager) FindURLByToken(token string) (string, error) {
 	query := `
 		SELECT r.url
 		FROM redirects r
@@ -116,6 +119,7 @@ func (m *SQLManager) FindUrlByToken(token string) (string, error) {
 	return r, nil
 }
 
+// InsertToken insert redirect url and token
 func (m *SQLManager) InsertToken(userID, uri, token string) error {
 	if isEmpty(userID) || isEmpty(uri) || isEmpty(token) {
 		return fmt.Errorf("null param provided: userID %s, uri %s, token %s", userID, uri, token)
@@ -149,6 +153,7 @@ func (m *SQLManager) InsertToken(userID, uri, token string) error {
 	return nil
 }
 
+// TokenExist check token for exist
 func (m *SQLManager) TokenExist(token string) bool {
 	query := `
 	   	SELECT COUNT(*)
@@ -173,6 +178,7 @@ func (m *SQLManager) TokenExist(token string) bool {
 	return r > 0
 }
 
+// InitManager create db manager
 func InitManager(userPass string) *SQLManager {
 	m := &SQLManager{}
 
@@ -221,6 +227,7 @@ func (m *SQLManager) insert(dataInsert *sg.InsertData) int {
 	return int(ra)
 }
 
+// Close db manager
 func (m *SQLManager) Close() {
 	_ = m.conn.Close()
 }

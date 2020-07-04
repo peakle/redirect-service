@@ -242,7 +242,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	var token, redirectURI string
 
 	token = strings.TrimLeft(validator.Replace(path), "/")
-	redirectURI, err = mRead.FindUrlByToken(token)
+	redirectURI, err = mRead.FindURLByToken(token)
 	if err != nil {
 		fmt.Printf("error occurred on find url: %v \r\n", err)
 		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
