@@ -61,7 +61,9 @@ func StartServer(c *cli.Context) {
 
 	var hostname, path string
 	hostname = c.App.Metadata["Hostname"].(string)
+
 	front := projectDir + "/" + frontPage
+	favicon := projectDir + "/favicon.ico"
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		path = string(ctx.Path())
@@ -74,6 +76,7 @@ func StartServer(c *cli.Context) {
 			handleStats(ctx)
 		default:
 			if strings.Contains(path, "favicon.ico") {
+				ctx.SendFile(favicon)
 				return
 			}
 

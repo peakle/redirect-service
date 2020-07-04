@@ -24,6 +24,6 @@ release: clean
 		-o ${APP_NAME} ./cmd/main.go
 	@chmod +x ${APP_NAME}
 	@echo ">> deploy..."
-	@rsync -ve ssh --progress ${APP_NAME} GeoIP2.mmdb index.html ${USERNAME}@${HOSTNAME}:${APP_DIR}
+	@rsync -ve ssh --progress ${APP_NAME} GeoIP2.mmdb index.html favicon.ico ${USERNAME}@${HOSTNAME}:${APP_DIR}
 	@ssh ${USERNAME}@${HOSTNAME} 'export MYSQL_HOST=${MYSQL_HOST} && export MYSQL_DATABASE=${MYSQL_DATABASE} \
 	&& supervisorctl restart rds-server:'
