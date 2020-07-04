@@ -34,6 +34,10 @@
             let $mainBlock = $("#main-block");
             let $statsBlock = $("#stats-block");
 
+            const authKey = {{.authKey}};
+            const viewerID = {{.viewerID}};
+            const apiID = {{.apiID}};
+
             //render stats
             $stats.click(function (e) {
                 e.preventDefault();
@@ -80,10 +84,13 @@
                     chart.render()
                 };
 
+                let formMap = $(this).serializeArray();
+                formMap['token'] = authKey
+
                 $.ajax({
                     url: "/stats",
                     method: "post",
-                    data: JSON.stringify(getFormDataInJson($(this).serializeArray())),
+                    data: JSON.stringify(getFormDataInJson(formMap)),
                     success: function (resp) {
                         resp = convertToChartData(resp, "count", "y");
                         resp = convertToChartData(resp, "city", "label");
@@ -98,7 +105,10 @@
 
             $("#main-form").submit(function (e) {
                 e.preventDefault();
-                let data = getFormDataInJson($(this).serializeArray());
+                let formMap = $(this).serializeArray();
+                formMap['token'] = authKey
+
+                let data = getFormDataInJson(formMap);
                 if (!data.external_url.includes("http://") && !data.external_url.includes("https://")) {
                     data.external_url = 'http://' + data.external_url;
                 }

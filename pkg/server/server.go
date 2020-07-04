@@ -1,22 +1,34 @@
 package server
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/url"
+	"os"
 	"strings"
 
+	"github.com/gorilla/schema"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/urfave/cli"
 	"github.com/valyala/fasthttp"
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
 )
 
-// EntryDto struct for parse entry request
+// EntryDto for ajax requests from front
 type EntryDto struct {
 	URL    string `json:"external_url"`
 	UserID string `json:"user_id"`
 	Token  string `json:"token"`
+}
+
+// VkDto url params from vk sended on init session
+type VkDto struct {
+	userID   string `schema:"user_id"`
+	authKey  string `schema:"auth_key"`
+	apiID    string `schema:"api_id"`
+	viewerID string `schema:"viewer_id"`
 }
 
 var (
@@ -54,6 +66,8 @@ func StartServer(c *cli.Context) {
 	defer db.Close()
 
 	projectDir := c.App.Metadata["ProjectDir"].(string)
+
+	// TODO replace manager init from boot
 	mRead = provider.InitManager(c.App.Metadata["ReadUser"].(string))
 	mWrite = provider.InitManager(c.App.Metadata["WriteUser"].(string))
 	defer mRead.Close()
@@ -64,12 +78,13 @@ func StartServer(c *cli.Context) {
 
 	front := projectDir + "/" + frontPage
 	favicon := projectDir + "/favicon.ico"
+	frontTemplate, _ := template.ParseFiles(front)
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		path = string(ctx.Path())
 		switch path {
 		case "/":
-			handleFront(ctx, front)
+			handleFront(ctx, frontTemplate)
 		case "/creation":
 			handleCreateToken(ctx, hostname)
 		case "/stats":
@@ -102,8 +117,32 @@ func StartServer(c *cli.Context) {
 	}
 }
 
-func handleFront(ctx *fasthttp.RequestCtx, page string) {
-	ctx.SendFile(page)
+func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
+	uri, err := url.Parse(ctx.Request.URI().String())
+	if err != nil {
+		return
+	}
+
+	var entryDto VkDto
+
+	err = schema.NewDecoder().Decode(&entryDto, uri.Query())
+	if err != nil {
+		return
+	}
+
+	if !verifyRequest(entryDto) {
+		return
+	}
+
+	frontTemplate.Execute(ctx.Request.BodyWriter(), struct {
+		authKey  string
+		viewerID string
+		apiID    string
+	}{
+		authKey:  entryDto.authKey,
+		viewerID: entryDto.viewerID,
+		apiID:    entryDto.apiID,
+	})
 }
 
 func handleStats(ctx *fasthttp.RequestCtx) {
@@ -120,11 +159,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	if entryDto.UserID == "" {
-		entryDto.UserID = "1"
-	} else {
-		entryDto.UserID = validator.Replace(entryDto.UserID)
-	}
+	entryDto.UserID = validator.Replace(entryDto.UserID)
 
 	var (
 		uri   *url.URL
@@ -166,6 +201,10 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		entryDto EntryDto
 	)
 
+	if !verifyAPIRequest(ctx.Request.URI().String()) {
+		return
+	}
+
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
 		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
@@ -174,11 +213,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	if entryDto.UserID == "" {
-		entryDto.UserID = "1"
-	} else {
-		entryDto.UserID = validator.Replace(entryDto.UserID)
-	}
+	entryDto.UserID = validator.Replace(entryDto.UserID)
 
 	entryDto.URL = validateAndFixURL(entryDto.URL)
 	token, err = mRead.Create(entryDto.URL)
@@ -249,4 +284,31 @@ func validateAndFixURL(uri string) string {
 	}
 
 	return fmt.Sprintf("http://%s", uri)
+}
+
+func verifyRequest(reqDto VkDto) bool {
+	apiSecret := os.Getenv("API_SECRET")
+	serverAuthKey := fmt.Sprintf("%x", md5.Sum([]byte(reqDto.apiID+"_"+reqDto.viewerID+"_"+apiSecret)))
+
+	return reqDto.authKey == serverAuthKey
+}
+
+func verifyAPIRequest(uriPath string) bool {
+	uri, err := url.Parse(uriPath)
+	if err != nil {
+		return false
+	}
+
+	var entryDto VkDto
+
+	err = schema.NewDecoder().Decode(&entryDto, uri.Query())
+	if err != nil {
+		return false
+	}
+
+	if !verifyRequest(entryDto) {
+		return false
+	}
+
+	return true
 }

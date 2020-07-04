@@ -26,4 +26,5 @@ release: clean
 	@echo ">> deploy..."
 	@rsync -ve ssh --progress ${APP_NAME} GeoIP2.mmdb index.html favicon.ico ${USERNAME}@${HOSTNAME}:${APP_DIR}
 	@ssh ${USERNAME}@${HOSTNAME} 'export MYSQL_HOST=${MYSQL_HOST} && export MYSQL_DATABASE=${MYSQL_DATABASE} \
+	&& export API_SECRET=${API_SECRET} \
 	&& supervisorctl restart rds-server:'
