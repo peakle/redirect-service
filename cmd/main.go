@@ -25,7 +25,7 @@ var (
 	}
 )
 
-//go:generate go run get.go
+//go:generate go run ../gen.go
 func main() {
 	app := cli.NewApp()
 	app.Name = "rds"
