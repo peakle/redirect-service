@@ -18,9 +18,11 @@ build: clean
 		-X main.ProjectDir=${APP_DIR}" \
 		-o ${APP_NAME} ./cmd/*.go
 	@chmod +x ${APP_NAME}
+	@rm -f cmd/env.go
 
 release: clean
 	@echo ">> building..."
+	@go generate ./cmd/main.go
 	@ CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} \
 		go build -ldflags \
 		"-X main.Hostname=https://${HOSTNAME} \
@@ -31,5 +33,5 @@ release: clean
 	@chmod +x ${APP_NAME}
 	@echo ">> deploy..."
 	@rsync -ve ssh --progress ${APP_NAME} GeoIP2.mmdb index.html favicon.ico ${USERNAME}@${HOSTNAME}:${APP_DIR}
-	@ssh ${USERNAME}@${HOSTNAME} && supervisorctl restart rds-server:'
+	@ssh ${USERNAME}@${HOSTNAME} 'supervisorctl restart rds-server:'
 	@rm -f cmd/env.go
