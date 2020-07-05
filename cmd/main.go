@@ -9,7 +9,7 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/server"
 )
 
-// TODO delete global vars
+// TODO delete global vars interpritate to env vars and add to gen.go to add on generate
 var (
 	Hostname   = "http://localhost:443"
 	WriteUser  = "root:root_pass"

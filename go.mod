@@ -11,4 +11,5 @@ require (
 	github.com/wakeapp/go-id-generator v0.2.0
 	github.com/wakeapp/go-sql-generator v0.0.0-20191016142837-5e468acc8837
 	github.com/gorilla/schema v1.1.0
+	github.com/joho/godotenv v1.3.0
 )
