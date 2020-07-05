@@ -137,14 +137,11 @@ func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 		return
 	}
 
-	frontTemplate.Execute(ctx.Request.BodyWriter(), struct {
-		authKey  string
-		viewerID string
-		apiID    string
-	}{
-		authKey:  entryDto.AuthKey,
-		viewerID: entryDto.ViewerID,
-		apiID:    entryDto.APIID,
+	ctx.Response.Header.SetContentType("text/html")
+	_ = frontTemplate.Execute(ctx, VkDto{
+		AuthKey:  entryDto.AuthKey,
+		ViewerID: entryDto.ViewerID,
+		APIID:    entryDto.APIID,
 	})
 }
 

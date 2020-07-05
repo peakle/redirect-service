@@ -4,5 +4,6 @@ GeoIP2.mmdb
 docker/.data
 supervisor.conf
 rds
-certificate_ca.crt
+certificate.crt
 key.pem
+favicon.ico.fasthttp.gz

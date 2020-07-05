@@ -9,8 +9,13 @@ clean:
 
 build: clean
 	@echo ">> building..."
-	@ CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} \
-	    go build -o ${APP_NAME} ./cmd/main.go
+	@ CGO_ENABLED=0\
+	    go build -ldflags \
+		"-X main.Hostname=http://${HOSTNAME} \
+		-X main.WriteUser=${MYSQL_WRITE_USER}:${MYSQL_WRITE_PASS} \
+		-X main.ReadUser=${MYSQL_READ_USER}:${MYSQL_READ_PASS} \
+		-X main.ProjectDir=${APP_DIR}" \
+		-o ${APP_NAME} ./cmd/main.go
 	@chmod +x ${APP_NAME}
 
 release: clean

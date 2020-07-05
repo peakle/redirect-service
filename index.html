@@ -37,11 +37,11 @@
             const StatsTitle = "Статистика редиректов"
             const CreationTitle = "Создание редиректа"
 
-            const authKey = {{.authKey}};
-            const viewerID = {{.viewerID}};
-            const apiID = {{.apiID}};
+            const AuthKey = {{.AuthKey}};
+            const ViewerID = {{.ViewerID}};
+            const APIID = {{.APIID}};
 
-            const apiURLParams = `?auth_key=${{authKey}}&viewer_id=${{viewerID}}&api_id=${{apiID}}`
+            const apiURLParams = `?auth_key=${AuthKey}&viewer_id=${ViewerID}&api_id=${APIID}`
 
             //render stats
             $stats.click(function (e) {
