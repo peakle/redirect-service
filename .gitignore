@@ -7,3 +7,4 @@ rds
 certificate.crt
 key.pem
 favicon.ico.fasthttp.gz
+cmd/env.go
