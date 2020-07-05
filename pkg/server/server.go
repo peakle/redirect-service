@@ -25,10 +25,9 @@ type EntryDto struct {
 
 // VkDto url params from vk sended on init session
 type VkDto struct {
-	userID   string `schema:"user_id"`
-	authKey  string `schema:"auth_key"`
-	apiID    string `schema:"api_id"`
-	viewerID string `schema:"viewer_id"`
+	AuthKey  string `schema:"auth_key"`
+	APIID    string `schema:"api_id"`
+	ViewerID string `schema:"viewer_id"`
 }
 
 var (
@@ -85,17 +84,17 @@ func StartServer(c *cli.Context) {
 		switch path {
 		case "/":
 			handleFront(ctx, frontTemplate)
-		case "/creation":
+		case "/create":
 			handleCreateToken(ctx, hostname)
 		case "/stats":
 			handleStats(ctx)
+		case "/redirect":
+			handleRedirect(ctx, path)
 		default:
 			if strings.Contains(path, "favicon.ico") {
 				ctx.SendFile(favicon)
-				return
 			}
-
-			handleRedirect(ctx, path)
+			return
 		}
 	}
 
@@ -120,13 +119,17 @@ func StartServer(c *cli.Context) {
 func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 	uri, err := url.Parse(ctx.Request.URI().String())
 	if err != nil {
+		fmt.Println(err.Error())
 		return
 	}
 
 	var entryDto VkDto
 
-	err = schema.NewDecoder().Decode(&entryDto, uri.Query())
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	err = decoder.Decode(&entryDto, uri.Query())
 	if err != nil {
+		fmt.Println("error occurred on decode url params" + err.Error())
 		return
 	}
 
@@ -139,9 +142,9 @@ func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 		viewerID string
 		apiID    string
 	}{
-		authKey:  entryDto.authKey,
-		viewerID: entryDto.viewerID,
-		apiID:    entryDto.apiID,
+		authKey:  entryDto.AuthKey,
+		viewerID: entryDto.ViewerID,
+		apiID:    entryDto.APIID,
 	})
 }
 
@@ -232,7 +235,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	redirectURI := fmt.Sprintf(`%s/%s`, hostname, token)
+	redirectURI := fmt.Sprintf(`%s/redirect/%s`, hostname, token)
 
 	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(jsonResponse, 0, redirectURI))
 }
@@ -288,21 +291,25 @@ func validateRedirectURL(uri string) string {
 
 func verifyRequest(reqDto VkDto) bool {
 	apiSecret := os.Getenv("API_SECRET")
-	serverAuthKey := fmt.Sprintf("%x", md5.Sum([]byte(reqDto.apiID+"_"+reqDto.viewerID+"_"+apiSecret)))
+	serverAuthKey := fmt.Sprintf("%x", md5.Sum([]byte(reqDto.APIID+"_"+reqDto.ViewerID+"_"+apiSecret)))
 
-	return reqDto.authKey == serverAuthKey
+	return reqDto.AuthKey == serverAuthKey
 }
 
 func verifyAPIRequest(uriPath string) bool {
 	uri, err := url.Parse(uriPath)
 	if err != nil {
+		fmt.Println("error occurred on verify api reques: " + err.Error())
 		return false
 	}
 
 	var entryDto VkDto
 
-	err = schema.NewDecoder().Decode(&entryDto, uri.Query())
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	err = decoder.Decode(&entryDto, uri.Query())
 	if err != nil {
+		fmt.Println("error occurred on decode url params " + err.Error())
 		return false
 	}
 
