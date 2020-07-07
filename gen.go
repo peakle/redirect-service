@@ -54,7 +54,7 @@ import "os"
 func init() {
 	os.Setenv("MYSQL_HOSTNAME", "{{.MysqlHostname}}")
 	os.Setenv("MYSQL_DATABASE", "{{.MysqlDatabase}}")
-	os.Setenv("APISecret", "{{.APISecret}}")
+	os.Setenv("API_SECRET", "{{.APISecret}}")
 }
 `))
 

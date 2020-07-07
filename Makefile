@@ -18,7 +18,6 @@ build: clean
 		-X main.ProjectDir=${APP_DIR}" \
 		-o ${APP_NAME} ./cmd/*.go
 	@chmod +x ${APP_NAME}
-	@rm -f cmd/env.go
 
 release: clean
 	@echo ">> building..."
@@ -34,4 +33,3 @@ release: clean
 	@echo ">> deploy..."
 	@rsync -ve ssh --progress ${APP_NAME} GeoIP2.mmdb index.html favicon.ico ${USERNAME}@${HOSTNAME}:${APP_DIR}
 	@ssh ${USERNAME}@${HOSTNAME} 'supervisorctl restart rds-server:'
-	@rm -f cmd/env.go
