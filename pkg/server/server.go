@@ -49,7 +49,7 @@ var (
 )
 
 const (
-	errorMessage  = `{"code":1,"text":"please reload page and try again"}`
+	errorMessage  = `{"code":1,"text":"Возникла ошибка обновите страницу"}`
 	jsonResponse  = `{"code":"%d","text":"%s"}`
 	frontPage     = "index.html"
 	undefinedCity = "неизвестно"

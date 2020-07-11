@@ -32,6 +32,10 @@
             return objectList;
         }
 
+        function alert(message) {
+            return `<div class="alert alert-danger" role="alert">${message}</div>`
+        }
+
         $(document).ready(function () {
             let $stats = $("#stats");
             let $main = $("#main");
@@ -44,7 +48,7 @@
             const AuthKey = "" //{{.AuthKey}};
             const ViewerID = "" //{{.ViewerID}};
             const APIID = "" //{{.APIID}};
-
+            const ErrorMessage = "Возникла ошибка, обновите страницу"
             const apiURLParams = `?auth_key=${AuthKey}&viewer_id=${ViewerID}&api_id=${APIID}`
 
             //render stats
@@ -128,13 +132,18 @@
                     method: "post",
                     data: JSON.stringify(getFormDataInJson(formMap)),
                     success: function (resp) {
-                        resp = convertToChartData(resp, "count", "y");
-                        resp = convertToChartData(resp, "city", "label");
-                        //TODO add table representation
-                        drawChart(resp);
+                        let r = JSON.parse(resp)
+                        if (r.code == 0) {
+                            resp = convertToChartData(resp, "count", "y");
+                            resp = convertToChartData(resp, "city", "label");
+                            //TODO add table representation
+                            drawChart(resp);
+                        } else {
+                            let popup = alert(r.text)
+                        }
                     },
                     fail: function () {
-                        //TODO draw error bubble
+                        let popup = alert(ErrorMessage)
                     }
                 });
             });
@@ -156,14 +165,18 @@
                     data: JSON.stringify(data),
                     success: function (resp) {
                         let r = JSON.parse(resp);
-                        // TODO draw to input 
+                        if (r.code == 0) {
+                            $('#copy-input').value = r.text
+                        } else {
+                            let popup = alert(r.text)
+                        }
                     },
                     fail: function () {
-                        // TODO draw error bubble
+                        let popup = alert(ErrorMessage)
                     },
                 });
             });
-        })
+        });
     </script>
 
     <div class="card text-center" style="border: none">
