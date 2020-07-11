@@ -61,11 +61,9 @@
             $('#copy-button').tooltip();
 
             $('#copy-button').bind('click', function () {
-                var input = document.querySelector('#copy-input');
-                input.setSelectionRange(0, input.value.length + 1);
+                document.querySelector('#copy-input').select();
                 try {
-                    var success = document.execCommand('copy');
-                    if (success) {
+                    if (document.execCommand('copy')) {
                         $('#copy-button').trigger('copied', ['Токен скопирован']);
                     } else {
                         $('#copy-button').trigger('copied', ['Скопируйте с Ctrl-c']);
@@ -79,7 +77,7 @@
                 $(this).attr('title', message)
                     .tooltip("_fixTitle")
                     .tooltip('show')
-                    .attr("title", null)
+                    .attr("title", 'Скопируйте')
                     .tooltip("_fixTitle")
             });
 
@@ -194,7 +192,7 @@
             <div class="d-flex justify-content-center">
                 <form class="form-inline" id="main-form">
                     <div class="form-group input-group mx-sm-3 mb-2">
-                        <input type="text" class="form-control" value="" placeholder="Ссылка" id="copy-input" required>
+                        <input type="text" class="form-control" value="" placeholder="Ссылка" id="copy-input">
                         <div class="input-group-append">
                             <button type="submit" class="input-group-text btn btn-primary" id="copy-button">Копировать</button>
                         </div>
