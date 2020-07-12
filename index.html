@@ -125,7 +125,6 @@
                 };
 
                 let formMap = $(this).serializeArray();
-                formMap['token'] = authKey
 
                 $.ajax({
                     url: "/stats" + apiURLParams,
@@ -140,20 +139,20 @@
                             drawChart(resp);
                         } else {
                             let popup = alert(r.text)
+                            //todo add to page 
                         }
                     },
                     fail: function () {
                         let popup = alert(ErrorMessage)
+                        //todo add to page
                     }
                 });
             });
 
             $("#main-form").submit(function (e) {
                 e.preventDefault();
-                let formMap = $(this).serializeArray();
-                formMap['token'] = authKey
+                let data = getFormDataInJson($(this).serializeArray());
 
-                let data = getFormDataInJson(formMap);
                 if (!data.external_url.includes("http://") && !data.external_url.includes("https://")) {
                     data.external_url = 'http://' + data.external_url;
                 }
@@ -169,10 +168,12 @@
                             $('#copy-input').value = r.text
                         } else {
                             let popup = alert(r.text)
+                            //todo add to page
                         }
                     },
                     fail: function () {
                         let popup = alert(ErrorMessage)
+                        //todo add to page
                     },
                 });
             });
