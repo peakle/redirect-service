@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Create redirect token for provided url and insetr it to db
 func (m *SQLManager) Create(uri string) (string, error) {
 	const CreationError = "creation error"
 
