@@ -9,13 +9,8 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/server"
 )
 
-// TODO delete global vars interpritate to env vars and add to gen.go to add on generate
 var (
-	Hostname   = "http://localhost:443"
-	WriteUser  = "root:root_pass"
-	ReadUser   = "root:root_pass"
-	ProjectDir = "/"
-	commands   = []cli.Command{
+	commands = []cli.Command{
 		{
 			Name:        "server",
 			Description: "starts redirect server",
@@ -30,12 +25,6 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rds"
 	app.Commands = commands
-	app.Metadata = map[string]interface{}{
-		"Hostname":   Hostname,
-		"WriteUser":  WriteUser,
-		"ReadUser":   ReadUser,
-		"ProjectDir": ProjectDir,
-	}
 
 	err := app.Run(os.Args)
 	if err != nil {

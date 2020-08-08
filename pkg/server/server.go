@@ -64,23 +64,24 @@ func StartServer(c *cli.Context) {
 	db, err = geoip2.Open("GeoIP2.mmdb")
 	defer db.Close()
 
-	projectDir := c.App.Metadata["ProjectDir"].(string)
+	projectDir := os.Getenv("PROJECT_DIR")
 
-	// TODO replace manager init from boot
-	mRead = provider.InitManager(c.App.Metadata["ReadUser"].(string))
-	mWrite = provider.InitManager(c.App.Metadata["WriteUser"].(string))
+	writeUserPass := os.Getenv("MYSQL_WRITE_USER")
+	readUserPass := os.Getenv("MYSQL_READ_USER")
+
+	mRead = provider.InitManager(readUserPass)
+	mWrite = provider.InitManager(writeUserPass)
 	defer mRead.Close()
 	defer mWrite.Close()
 
-	var hostname, path string
-	hostname = c.App.Metadata["Hostname"].(string)
+	hostname := os.Getenv("HOSTNAME")
 
 	front := projectDir + "/" + frontPage
 	favicon := projectDir + "/favicon.ico"
 	frontTemplate, _ := template.ParseFiles(front)
 
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
-		path = string(ctx.Path())
+		path := string(ctx.Path())
 		switch path {
 		case "/":
 			handleFront(ctx, frontTemplate)

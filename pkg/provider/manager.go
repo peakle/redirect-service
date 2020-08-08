@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	idgen "github.com/wakeapp/go-id-generator"
@@ -31,6 +32,8 @@ type StatResponse struct {
 	Date      string `json:"date"`
 	Count     string `json:"count"`
 }
+
+var managers sync.Map
 
 // RecordStats about entry
 func (m *SQLManager) RecordStats(ip, useragent, city, token string) {
@@ -180,6 +183,10 @@ func (m *SQLManager) TokenExist(token string) bool {
 
 // InitManager create db manager
 func InitManager(userPass string) *SQLManager {
+	if m, ok := managers.Load(userPass); ok {
+		return m.(*SQLManager)
+	}
+
 	m := &SQLManager{}
 
 	m.open(&config{
@@ -189,7 +196,34 @@ func InitManager(userPass string) *SQLManager {
 		DBName:   os.Getenv("MYSQL_DATABASE"),
 	})
 
+	managers.Store(userPass, m)
+
+	go func() {
+		timeout := time.NewTicker(time.Second * 120)
+
+		for {
+			select {
+			case <-timeout.C:
+				m.Ping()
+			}
+		}
+	}()
+
 	return m
+}
+
+// Close db manager
+func (m *SQLManager) Close() {
+	_ = m.conn.Close()
+}
+
+// Ping - ping and reestablishe connection with DB
+func (m *SQLManager) Ping() {
+	err := m.conn.Ping()
+
+	if err != nil {
+		handleErr(err)
+	}
 }
 
 func (m *SQLManager) insert(dataInsert *sg.InsertData) int {
@@ -227,13 +261,8 @@ func (m *SQLManager) insert(dataInsert *sg.InsertData) int {
 	return int(ra)
 }
 
-// Close db manager
-func (m *SQLManager) Close() {
-	_ = m.conn.Close()
-}
-
 func handleErr(err error) {
-	fmt.Printf("error occurred: %v", err)
+	fmt.Printf("error occurred: " + err.Error())
 }
 
 func (m *SQLManager) open(c *config) {
