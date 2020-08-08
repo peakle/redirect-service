@@ -217,7 +217,7 @@ func (m *SQLManager) Close() {
 	_ = m.conn.Close()
 }
 
-// Ping - ping and reestablishe connection with DB
+// Ping - ping and reset connection with DB
 func (m *SQLManager) Ping() {
 	err := m.conn.Ping()
 
