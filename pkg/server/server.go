@@ -91,10 +91,10 @@ func StartServer(c *cli.Context) {
 			handleStats(ctx)
 		case "/redirect":
 			handleRedirect(ctx, path)
+		case "/favicon.ico":
+			ctx.SendFile(favicon)
 		default:
-			if strings.Contains(path, "favicon.ico") {
-				ctx.SendFile(favicon)
-			}
+			ctx.Response.SetConnectionClose()
 			return
 		}
 	}
