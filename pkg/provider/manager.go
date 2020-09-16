@@ -200,6 +200,7 @@ func InitManager(userPass string) *SQLManager {
 
 	go func() {
 		timeout := time.NewTicker(time.Second * 120)
+		defer timeout.Stop()
 
 		for {
 			select {
