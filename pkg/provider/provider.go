@@ -40,5 +40,5 @@ func (m *SQLManager) Create(uri string) (string, error) {
 }
 
 func isEmpty(str string) bool {
-	return strings.TrimSpace(str) == ""
+	return str == "" || strings.TrimSpace(str) == ""
 }

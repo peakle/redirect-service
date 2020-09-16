@@ -120,7 +120,7 @@ func StartServer(c *cli.Context) {
 func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 	uri, err := url.Parse(ctx.Request.URI().String())
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("on handleFront: on url.Parse: " + err.Error())
 		return
 	}
 
@@ -130,7 +130,7 @@ func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 	decoder.IgnoreUnknownKeys(true)
 	err = decoder.Decode(&entryDto, uri.Query())
 	if err != nil {
-		fmt.Println("error occurred on decode url params" + err.Error())
+		fmt.Println("on handleFront: on decode url params" + err.Error())
 		return
 	}
 
@@ -154,7 +154,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
-		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
+		fmt.Printf("on handleStats: on unmarshal json: %s, provided body: %s \r\n", err.Error(), string(ctx.Request.Body()))
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -176,7 +176,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 
 	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
 	if err != nil {
-		fmt.Printf("error occurred on handle stats: %v, entryDto: %v \r\n", err, entryDto)
+		fmt.Printf("on handleStats: %s, entryDto: %v \r\n", err.Error(), entryDto)
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -185,7 +185,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	var r []byte
 	r, err = json.Marshal(stats)
 	if err != nil {
-		fmt.Printf("error occurred on handle stats format json: %v, entryDto: %v \r\n", err, entryDto)
+		fmt.Printf("on handleStats: on format json: %s, entryDto: %v \r\n", err.Error(), entryDto)
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -208,7 +208,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
-		fmt.Printf("error occurred on unmarshal json: %v, provided body: %s \r\n", err, string(ctx.Request.Body()))
+		fmt.Printf("on handleCreateToken: on unmarshal json: %s, provided body: %s \r\n", err.Error(), string(ctx.Request.Body()))
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -219,7 +219,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	entryDto.URL = validateRedirectURL(entryDto.URL)
 	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
-		fmt.Printf("error occurred on create token: %v, entryDto: %v \r\n", err, entryDto)
+		fmt.Printf("on handleCreateToken: on Create: %s, entryDto: %v \r\n", err.Error(), entryDto)
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -227,7 +227,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 
 	err = mWrite.InsertToken(entryDto.UserID, entryDto.URL, token)
 	if err != nil {
-		fmt.Printf("error occurred on insert token: %v, provided data: entryDto: %v, token: %s \r\n", err, entryDto, token)
+		fmt.Printf("on handleCreateToken: on insert token: %s, provided data: entryDto: %v, token: %s \r\n", err.Error(), entryDto, token)
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -245,7 +245,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	token = strings.TrimLeft(validator.Replace(path), "/")
 	redirectURI, err = mRead.FindURLByToken(token)
 	if err != nil {
-		fmt.Printf("error occurred on find url: %v \r\n", err)
+		fmt.Printf("on handleRedirect: on find url: %v \r\n", err.Error())
 		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
 	}
 
@@ -262,7 +262,7 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 
 	city, err = db.City(ctx.RemoteIP())
 	if err != nil {
-		fmt.Printf("error occurred on parse remote ip: %v \r\n", err)
+		fmt.Println("on handleRedirect: on parse remote ip: " + err.Error())
 		return
 	}
 
@@ -297,7 +297,7 @@ func verifyRequest(reqDto VkDto) bool {
 func verifyAPIRequest(uriPath string) bool {
 	uri, err := url.Parse(uriPath)
 	if err != nil {
-		fmt.Println("error occurred on verify api reques: " + err.Error())
+		fmt.Println("on verifyApiRequest: on url.Parse: " + err.Error())
 		return false
 	}
 
@@ -307,7 +307,7 @@ func verifyAPIRequest(uriPath string) bool {
 	decoder.IgnoreUnknownKeys(true)
 	err = decoder.Decode(&entryDto, uri.Query())
 	if err != nil {
-		fmt.Println("error occurred on decode url params " + err.Error())
+		fmt.Println("on verifyApiRequest: on decode url params: " + err.Error())
 		return false
 	}
 
