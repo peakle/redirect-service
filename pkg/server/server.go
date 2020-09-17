@@ -182,7 +182,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var r []byte
+	var r = make([]byte, 0, 200)
 	r, err = json.Marshal(stats)
 	if err != nil {
 		fmt.Printf("on handleStats: on format json: %s, entryDto: %v \r\n", err.Error(), entryDto)
