@@ -16,8 +16,8 @@ import (
 	"gitlab.com/Peakle/redirect-service/pkg/provider"
 )
 
-// EntryDto for ajax requests from front
-type EntryDto struct {
+// apiDto for ajax requests from front
+type apiDto struct {
 	URL    string `json:"external_url"`
 	UserID string `json:"user_id"`
 	Token  string `json:"token"`
@@ -34,6 +34,7 @@ var (
 	db        *geoip2.Reader
 	mRead     *provider.SQLManager
 	mWrite    *provider.SQLManager
+	apiSecret = os.Getenv("API_SECRET")
 	validator = strings.NewReplacer(
 		"*", "",
 		"<", "",
@@ -113,48 +114,44 @@ func StartServer(c *cli.Context) {
 
 	err = fasthttp.ListenAndServeTLS(":8443", certFile, keyFile, requestHandler)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, "on startServer: "+err.Error())
 	}
 }
 
 func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
-	uri, err := url.Parse(ctx.Request.URI().String())
+	vkDto, err := parseVKDTO(ctx.Request.URI().String())
 	if err != nil {
-		fmt.Println("on handleFront: on url.Parse: " + err.Error())
+		fmt.Fprintln(os.Stderr, "on handleFront: "+err.Error())
+
+		ctx.Request.SetConnectionClose()
+
 		return
 	}
 
-	var entryDto VkDto
-
-	decoder := schema.NewDecoder()
-	decoder.IgnoreUnknownKeys(true)
-	err = decoder.Decode(&entryDto, uri.Query())
-	if err != nil {
-		fmt.Println("on handleFront: on decode url params" + err.Error())
-		return
-	}
-
-	if !verifyRequest(entryDto) {
+	if !verifyAPIRequest(vkDto) {
 		return
 	}
 
 	ctx.Response.Header.SetContentType("text/html")
 	_ = frontTemplate.Execute(ctx, VkDto{
-		AuthKey:  entryDto.AuthKey,
-		ViewerID: entryDto.ViewerID,
-		APIID:    entryDto.APIID,
+		AuthKey:  vkDto.AuthKey,
+		ViewerID: vkDto.ViewerID,
+		APIID:    vkDto.APIID,
 	})
 }
 
 func handleStats(ctx *fasthttp.RequestCtx) {
 	var (
 		err      error
-		entryDto EntryDto
+		entryDto apiDto
 	)
 
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
-		fmt.Printf("on handleStats: on unmarshal json: %s, provided body: %s \r\n", err.Error(), string(ctx.Request.Body()))
+		err = fmt.Errorf("on handleStats: on unmarshal json: %s, provided body: %s", err.Error(), string(ctx.Request.Body()))
+		fmt.Fprintln(os.Stderr, err.Error())
+
+		ctx.Request.SetConnectionClose()
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -176,7 +173,10 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 
 	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
 	if err != nil {
-		fmt.Printf("on handleStats: %s, entryDto: %v \r\n", err.Error(), entryDto)
+		err = fmt.Errorf("on handleStats: %s, entryDto: %v", err.Error(), entryDto)
+		fmt.Fprintln(os.Stderr, err.Error())
+
+		ctx.Request.SetConnectionClose()
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -185,7 +185,10 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	var r = make([]byte, 0, 200)
 	r, err = json.Marshal(stats)
 	if err != nil {
-		fmt.Printf("on handleStats: on format json: %s, entryDto: %v \r\n", err.Error(), entryDto)
+		err = fmt.Errorf("on handleStats: on format json: %s, entryDto: %v", err.Error(), entryDto)
+		fmt.Fprintln(os.Stderr, err.Error())
+
+		ctx.Request.SetConnectionClose()
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -199,16 +202,27 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	var (
 		token    string
 		err      error
-		entryDto EntryDto
+		entryDto apiDto
 	)
 
-	if !verifyAPIRequest(ctx.Request.URI().String()) {
+	vkDTO, err := parseVKDTO(ctx.Request.URI().String())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "on handleCreateToken: "+err.Error())
+		ctx.Request.SetConnectionClose()
+
+		return
+	}
+
+	if !verifyAPIRequest(vkDTO) {
 		return
 	}
 
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
-		fmt.Printf("on handleCreateToken: on unmarshal json: %s, provided body: %s \r\n", err.Error(), string(ctx.Request.Body()))
+		err = fmt.Errorf("on handleCreateToken: on unmarshal json: %s, provided body: %s", err.Error(), string(ctx.Request.Body()))
+		fmt.Fprintln(os.Stderr, err.Error())
+
+		ctx.Request.SetConnectionClose()
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -219,7 +233,10 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	entryDto.URL = validateRedirectURL(entryDto.URL)
 	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
-		fmt.Printf("on handleCreateToken: on Create: %s, entryDto: %v \r\n", err.Error(), entryDto)
+		err = fmt.Errorf("on handleCreateToken: on Create: %s, entryDto: %v", err.Error(), entryDto)
+		fmt.Fprintln(os.Stderr, err.Error())
+
+		ctx.Request.SetConnectionClose()
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -227,7 +244,10 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 
 	err = mWrite.InsertToken(entryDto.UserID, entryDto.URL, token)
 	if err != nil {
-		fmt.Printf("on handleCreateToken: on insert token: %s, provided data: entryDto: %v, token: %s \r\n", err.Error(), entryDto, token)
+		err = fmt.Errorf("on handleCreateToken: on insert token: %s, provided data: entryDto: %v, token: %s", err.Error(), entryDto, token)
+		fmt.Fprintln(os.Stderr, err.Error())
+
+		ctx.Request.SetConnectionClose()
 		_, _ = fmt.Fprintf(ctx, errorMessage)
 
 		return
@@ -245,7 +265,8 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 	token = strings.TrimLeft(validator.Replace(path), "/")
 	redirectURI, err = mRead.FindURLByToken(token)
 	if err != nil {
-		fmt.Printf("on handleRedirect: on find url: %v \r\n", err.Error())
+		fmt.Fprintln(os.Stderr, "on handleRedirect: on find url: "+err.Error())
+
 		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
 	}
 
@@ -262,7 +283,8 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 
 	city, err = db.City(ctx.RemoteIP())
 	if err != nil {
-		fmt.Println("on handleRedirect: on parse remote ip: " + err.Error())
+		fmt.Fprintln(os.Stderr, "on handleRedirect: on parse remote ip: "+err.Error())
+
 		return
 	}
 
@@ -287,33 +309,37 @@ func validateRedirectURL(uri string) string {
 	return fmt.Sprintf("http://%s", uri)
 }
 
-func verifyRequest(reqDto VkDto) bool {
-	apiSecret := os.Getenv("API_SECRET")
+func verifyRequest(reqDto *VkDto) bool {
 	serverAuthKey := fmt.Sprintf("%x", md5.Sum([]byte(reqDto.APIID+"_"+reqDto.ViewerID+"_"+apiSecret)))
 
 	return reqDto.AuthKey == serverAuthKey
 }
 
-func verifyAPIRequest(uriPath string) bool {
-	uri, err := url.Parse(uriPath)
-	if err != nil {
-		fmt.Println("on verifyApiRequest: on url.Parse: " + err.Error())
-		return false
+func verifyAPIRequest(entryDto *VkDto) bool {
+	if entryDto.ViewerID == "" {
+		return true
 	}
 
-	var entryDto VkDto
+	return verifyRequest(entryDto)
+}
+
+func parseVKDTO(uriPath string) (*VkDto, error) {
+	uri, err := url.Parse(uriPath)
+	if err != nil {
+		err = fmt.Errorf("on verifyApiRequest: on url.Parse: " + err.Error())
+		return nil, err
+	}
+
+	var entryDto *VkDto
 
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
-	err = decoder.Decode(&entryDto, uri.Query())
+
+	err = decoder.Decode(entryDto, uri.Query())
 	if err != nil {
-		fmt.Println("on verifyApiRequest: on decode url params: " + err.Error())
-		return false
+		err = fmt.Errorf("on verifyApiRequest: on decode url params: " + err.Error())
+		return nil, err
 	}
 
-	if !verifyRequest(entryDto) {
-		return false
-	}
-
-	return true
+	return entryDto, nil
 }
