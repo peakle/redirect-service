@@ -129,6 +129,8 @@ func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 	}
 
 	if !verifyAPIRequest(vkDto) {
+		ctx.Request.SetConnectionClose()
+
 		return
 	}
 
@@ -145,6 +147,20 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 		err      error
 		entryDto apiDto
 	)
+
+	vkDTO, err := parseVKDTO(ctx.Request.URI().String())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "on handleStats: "+err.Error())
+		ctx.Request.SetConnectionClose()
+
+		return
+	}
+
+	if !verifyAPIRequest(vkDTO) {
+		ctx.Request.SetConnectionClose()
+
+		return
+	}
 
 	err = json.Unmarshal(ctx.Request.Body(), &entryDto)
 	if err != nil {
@@ -214,6 +230,8 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	}
 
 	if !verifyAPIRequest(vkDTO) {
+		ctx.Request.SetConnectionClose()
+
 		return
 	}
 
@@ -315,12 +333,12 @@ func verifyRequest(reqDto *VkDto) bool {
 	return reqDto.AuthKey == serverAuthKey
 }
 
-func verifyAPIRequest(entryDto *VkDto) bool {
-	if entryDto.ViewerID == "" {
+func verifyAPIRequest(vkDto *VkDto) bool {
+	if vkDto.ViewerID == "" {
 		return true
 	}
 
-	return verifyRequest(entryDto)
+	return verifyRequest(vkDto)
 }
 
 func parseVKDTO(uriPath string) (*VkDto, error) {
