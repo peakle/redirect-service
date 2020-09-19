@@ -80,20 +80,20 @@ func verifyAPIRequest(vkDto *VkDto) bool {
 func parseVKDTO(uriPath string) (*VkDto, error) {
 	uri, err := url.Parse(uriPath)
 	if err != nil {
-		err = fmt.Errorf("on verifyApiRequest: on url.Parse: " + err.Error())
+		err = fmt.Errorf("on parseVKDTO: on url.Parse: " + err.Error())
 		return nil, err
 	}
 
-	var entryDto *VkDto
+	var entryDto VkDto
 
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 
-	err = decoder.Decode(entryDto, uri.Query())
+	err = decoder.Decode(&entryDto, uri.Query())
 	if err != nil {
-		err = fmt.Errorf("on verifyApiRequest: on decode url params: " + err.Error())
+		err = fmt.Errorf("on parseVKDTO: on decode url params: " + err.Error())
 		return nil, err
 	}
 
-	return entryDto, nil
+	return &entryDto, nil
 }

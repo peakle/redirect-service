@@ -63,6 +63,12 @@ func main() {
 		return
 	}
 
+	hostname, isSet := envMap["HOSTNAME"]
+	if !isSet {
+		fmt.Println("HOSTNAME is not setted in .env file")
+		return
+	}
+
 	projectDir, isSet := envMap["PROJECT_DIR"]
 	if !isSet {
 		fmt.Println("PROJECT_DIR is not setted in .env file")
@@ -99,6 +105,7 @@ func init() {
 		MysqlWritePass string
 		MysqlReadUser  string
 		MysqlReadPass  string
+		Hostname       string
 		ProjectDir     string
 	}{
 		APISecret:      APISecret,
@@ -108,6 +115,7 @@ func init() {
 		MysqlWritePass: writePass,
 		MysqlReadUser:  readUser,
 		MysqlReadPass:  readPass,
+		Hostname:       hostname,
 		ProjectDir:     projectDir,
 	})
 }

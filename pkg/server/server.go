@@ -60,21 +60,21 @@ func StartServer(c *cli.Context) {
 
 	fmt.Println("Start server...")
 
-	db, err := geoip2.Open("GeoIP2City.mmdb")
+	projectDir := os.Getenv("PROJECT_DIR")
+
+	db, err := geoip2.Open(projectDir + "GeoIP2City.mmdb")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "on StartServer: on open GeoIP2City: "+err.Error())
 	}
 	defer db.Close()
 	dbs["city"] = db
 
-	db, err = geoip2.Open("GeoIP2Country.mmdb")
+	db, err = geoip2.Open(projectDir + "GeoIP2Country.mmdb")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "on StartServer: on open GeoIP2Country: "+err.Error())
 	}
 	defer db.Close()
 	dbs["country"] = db
-
-	projectDir := os.Getenv("PROJECT_DIR")
 
 	writeUserPass := os.Getenv("MYSQL_WRITE_USER")
 	readUserPass := os.Getenv("MYSQL_READ_USER")
