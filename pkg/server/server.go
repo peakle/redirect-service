@@ -311,7 +311,6 @@ func handleRedirect(ctx *fasthttp.RequestCtx, token string) {
 		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", token)
 	}
 
-	fmt.Fprintln(os.Stderr, redirectURI)
 	ctx.Response.Header.Set("Location", redirectURI)
 	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
 
