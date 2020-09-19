@@ -335,6 +335,7 @@ func verifyRequest(reqDto *VkDto) bool {
 
 func verifyAPIRequest(vkDto *VkDto) bool {
 	if vkDto.ViewerID == "" {
+		vkDto.ViewerID = "0"
 		return true
 	}
 
