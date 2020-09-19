@@ -28,6 +28,11 @@ type VkDto struct {
 	ViewerID string `schema:"viewer_id"`
 }
 
+type statResponse struct {
+	Code int              `json:"code"`
+	Body []provider.Stats `json:"body"`
+}
+
 var (
 	dbs       = make(map[string]*geoip2.Reader, 2)
 	mRead     *provider.SQLManager
@@ -90,6 +95,8 @@ func StartServer(c *cli.Context) {
 	favicon := projectDir + "/favicon.ico"
 	frontTemplate, _ := template.ParseFiles(front)
 
+	const redirectPath = "redirect"
+
 	requestHandler := func(ctx *fasthttp.RequestCtx) {
 		path := string(ctx.Path())
 		switch path {
@@ -99,23 +106,30 @@ func StartServer(c *cli.Context) {
 			handleCreateToken(ctx, hostname)
 		case "/stats":
 			handleStats(ctx)
-		case "/redirect":
-			handleRedirect(ctx, path)
 		case "/favicon.ico":
 			ctx.SendFile(favicon)
 		default:
+			if strings.Contains(path, redirectPath) {
+				parts := strings.Split(strings.TrimLeft(path, "/"), "/")
+
+				if len(parts) == 2 && parts[0] == redirectPath {
+					handleRedirect(ctx, parts[1])
+				}
+			}
+
 			ctx.Response.SetConnectionClose()
-			return
 		}
 	}
 
 	go fasthttp.ListenAndServe(":8080", func(ctx *fasthttp.RequestCtx) {
-		ctx.Response.Header.Set("Location", hostname+string(ctx.Path()))
+		ctx.Response.Header.Set("Location", hostname)
 		ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
 
 		ctx.Response.SetStatusCode(302)
 
 		fmt.Println(ctx)
+
+		return
 	})
 
 	certFile := projectDir + "/certificate.crt"
@@ -144,11 +158,7 @@ func handleFront(ctx *fasthttp.RequestCtx, frontTemplate *template.Template) {
 	}
 
 	ctx.Response.Header.SetContentType("text/html")
-	_ = frontTemplate.Execute(ctx, VkDto{
-		AuthKey:  vkDto.AuthKey,
-		ViewerID: vkDto.ViewerID,
-		APIID:    vkDto.APIID,
-	})
+	_ = frontTemplate.Execute(ctx, vkDto)
 }
 
 func handleStats(ctx *fasthttp.RequestCtx) {
@@ -182,8 +192,6 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	entryDto.UserID = validator.Replace(entryDto.UserID)
-
 	var (
 		uri   *url.URL
 		token string
@@ -191,12 +199,21 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 
 	uri, err = url.Parse(entryDto.Token)
 	if err == nil && uri.Path != "" {
-		token = validator.Replace(strings.TrimLeft(uri.Path, "/"))
+		parts := strings.Split(strings.TrimLeft(uri.Path, "/"), "/")
+		if len(parts) == 2 {
+			token = parts[1]
+		} else {
+			ctx.Request.SetConnectionClose()
+
+			_, _ = fmt.Fprintf(ctx, errorMessage)
+
+			return
+		}
 	} else {
-		entryDto.Token = validateRedirectURL(entryDto.Token)
+		token = entryDto.Token
 	}
 
-	stats, err := mRead.FindURLByTokenAndUserID(entryDto.UserID, token)
+	stats, err := mRead.FindURLByTokenAndUserID(vkDTO.ViewerID, token)
 	if err != nil {
 		err = fmt.Errorf("on handleStats: %s, entryDto: %v", err.Error(), entryDto)
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -208,7 +225,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 	}
 
 	var r []byte
-	r, err = json.Marshal(stats)
+	r, err = json.Marshal(statResponse{Body: stats})
 	if err != nil {
 		err = fmt.Errorf("on handleStats: on format json: %s, entryDto: %v", err.Error(), entryDto)
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -255,9 +272,6 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	entryDto.UserID = validator.Replace(entryDto.UserID)
-
-	entryDto.URL = validateRedirectURL(entryDto.URL)
 	token, err = mRead.Create(entryDto.URL)
 	if err != nil {
 		err = fmt.Errorf("on handleCreateToken: on Create: %s, entryDto: %v", err.Error(), entryDto)
@@ -269,7 +283,7 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 		return
 	}
 
-	err = mWrite.InsertToken(entryDto.UserID, entryDto.URL, token)
+	err = mWrite.InsertToken(vkDTO.ViewerID, entryDto.URL, token)
 	if err != nil {
 		err = fmt.Errorf("on handleCreateToken: on insert token: %s, provided data: entryDto: %v, token: %s", err.Error(), entryDto, token)
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -285,26 +299,25 @@ func handleCreateToken(ctx *fasthttp.RequestCtx, hostname string) {
 	_, _ = fmt.Fprintf(ctx, fmt.Sprintf(jsonResponse, 0, redirectURI))
 }
 
-func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
+func handleRedirect(ctx *fasthttp.RequestCtx, token string) {
 	var err error
-	var token, redirectURI string
+	var redirectURI string
 
-	token = strings.TrimLeft(validator.Replace(path), "/")
 	redirectURI, err = mRead.FindURLByToken(token)
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "on handleRedirect: on find url: "+err.Error())
 
-		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", strings.TrimLeft(path, "/"))
+		redirectURI = fmt.Sprintf("https://yandex.ru/search/?text=%s", token)
 	}
 
+	fmt.Fprintln(os.Stderr, redirectURI)
 	ctx.Response.Header.Set("Location", redirectURI)
 	ctx.Response.Header.Set("Content-Type", "text/html; charset=utf-8")
 
 	ctx.Response.SetStatusCode(302)
 
 	fmt.Println(ctx)
-
-	ctx.SetConnectionClose()
 
 	recordReq(ctx.RemoteIP(), ctx.UserAgent(), token)
 }

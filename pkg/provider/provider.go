@@ -27,7 +27,7 @@ func (m *SQLManager) Create(uri string) (string, error) {
 		t = fmt.Sprintf("%x", r)
 
 		if !m.TokenExist(t) {
-			break
+			return t, nil
 		}
 
 		time.Sleep(time.Second)
@@ -35,8 +35,6 @@ func (m *SQLManager) Create(uri string) (string, error) {
 			return "", errors.New(CreationError)
 		}
 	}
-
-	return t, nil
 }
 
 func isEmpty(str string) bool {

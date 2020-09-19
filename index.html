@@ -53,9 +53,9 @@
             const StatsTitle = "Статистика редиректов"
             const CreationTitle = "Создание редиректа"
 
-            const AuthKey = {{.AuthKey}};
-            const ViewerID = {{.ViewerID}};
-            const APIID = {{.APIID}};
+            const AuthKey = "{{ .AuthKey}}";
+            const ViewerID = "{{ .ViewerID}}";
+            const APIID = "{{ .APIID}}";
             const ErrorMessage = "Возникла ошибка, обновите страницу"
             const apiURLParams = `?auth_key=${AuthKey}&viewer_id=${ViewerID}&api_id=${APIID}`
 
@@ -74,7 +74,9 @@
 
             $('#copy-button').tooltip();
 
-            $('#copy-button').bind('click', function () {
+            $('#copy-button').bind('click', function (e) {
+                e.preventDefault();
+
                 document.querySelector('#copy-input').select();
                 try {
                     if (document.execCommand('copy')) {
@@ -139,14 +141,13 @@
                     method: "post",
                     data: JSON.stringify(getFormDataInJson(formMap)),
                     success: function (resp) {
-                        let r = JSON.parse(resp)
-                        if (r.code == 0) {
-                            resp = convertToChartData(resp, "count", "y");
+                        if (resp.code == 0) {
+                            resp = convertToChartData(resp.body, "count", "y");
                             resp = convertToChartData(resp, "city", "label");
                             //TODO add table representation
                             drawChart(resp);
                         } else {
-                            alert('#error-stats-block', r.text)
+                            alert('#error-stats-block', resp.text)
                         }
                     },
                     fail: function () {
@@ -171,7 +172,8 @@
                     success: function (resp) {
                         let r = JSON.parse(resp);
                         if (r.code == 0) {
-                            $('#copy-input').value = r.text
+                            $('#copy-input').attr('value', r.text);
+                            $("#copy-box").show();
                         } else {
                             alert('#error-main-block', r.text)
                         }
@@ -211,7 +213,7 @@
             </div>
             <div class="row" style="display: none;" id="error-main-block">
             </div>
-            <div class="d-flex justify-content-center" style="display: none !important;">
+            <div class="d-flex justify-content-center" id="copy-box" style="display: none !important;">
                 <form class="form-inline" id="main-form">
                     <div class="form-group input-group mx-sm-3 mb-2">
                         <input type="text" class="form-control" value="" placeholder="Ссылка" id="copy-input">

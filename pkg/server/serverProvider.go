@@ -69,8 +69,8 @@ func verifyRequest(reqDto *VkDto) bool {
 }
 
 func verifyAPIRequest(vkDto *VkDto) bool {
-	if vkDto.ViewerID == "" {
-		vkDto.ViewerID = "0"
+	// hack for annonymous
+	if vkDto.ViewerID == "0" {
 		return true
 	}
 
@@ -84,16 +84,23 @@ func parseVKDTO(uriPath string) (*VkDto, error) {
 		return nil, err
 	}
 
-	var entryDto VkDto
+	var vkDto VkDto
 
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 
-	err = decoder.Decode(&entryDto, uri.Query())
+	err = decoder.Decode(&vkDto, uri.Query())
 	if err != nil {
 		err = fmt.Errorf("on parseVKDTO: on decode url params: " + err.Error())
 		return nil, err
 	}
 
-	return &entryDto, nil
+	// hack for annonymous
+	if vkDto.ViewerID == "" {
+		vkDto.ViewerID = "0"
+		vkDto.APIID = "0"
+		vkDto.AuthKey = "0"
+	}
+
+	return &vkDto, nil
 }

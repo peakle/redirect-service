@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/joho/godotenv"
@@ -67,6 +68,10 @@ func main() {
 	if !isSet {
 		fmt.Println("HOSTNAME is not setted in .env file")
 		return
+	}
+
+	if !strings.Contains(hostname, "https://") {
+		hostname = "https://" + hostname
 	}
 
 	projectDir, isSet := envMap["PROJECT_DIR"]

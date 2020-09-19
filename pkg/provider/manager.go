@@ -24,8 +24,8 @@ type config struct {
 	DBName   string
 }
 
-// StatResponse response for `stats` route
-type StatResponse struct {
+// Stats response for `stats` route
+type Stats struct {
 	Useragent string `json:"useragent"`
 	IP        string `json:"ip"`
 	City      string `json:"city"`
@@ -67,11 +67,9 @@ func (m *SQLManager) RecordStats(ip, useragent, city, token string) {
 }
 
 // FindURLByTokenAndUserID export statistic about entries
-func (m *SQLManager) FindURLByTokenAndUserID(userID, token string) ([]StatResponse, error) {
+func (m *SQLManager) FindURLByTokenAndUserID(userID, token string) ([]Stats, error) {
 	query := `
 		SELECT
-			s.useragent,
-			s.ip,
 			s.city,
 		    COUNT(*) as count
 		FROM stats s
@@ -84,15 +82,15 @@ func (m *SQLManager) FindURLByTokenAndUserID(userID, token string) ([]StatRespon
 
 	rows, err := m.conn.Query(query, token, userID)
 	if err != nil {
-		return []StatResponse{}, err
+		return []Stats{}, err
 	}
 
-	var resp []StatResponse
+	var resp []Stats
 	for rows.Next() {
-		var r StatResponse
-		err = rows.Scan(&r.Useragent, &r.IP, &r.City, &r.Count)
+		var r Stats
+		err = rows.Scan(&r.City, &r.Count)
 		if err != nil {
-			return []StatResponse{}, err
+			return []Stats{}, err
 		}
 
 		resp = append(resp, r)
@@ -175,6 +173,7 @@ func (m *SQLManager) TokenExist(token string) bool {
 		}
 
 		handleErr(err)
+
 		return false
 	}
 
@@ -263,7 +262,7 @@ func (m *SQLManager) insert(dataInsert *sg.InsertData) int {
 }
 
 func handleErr(err error) {
-	fmt.Printf("error occurred: " + err.Error())
+	fmt.Fprintln(os.Stderr, err.Error())
 }
 
 func (m *SQLManager) open(c *config) {
