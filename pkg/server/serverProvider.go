@@ -12,6 +12,19 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
+var validator = strings.NewReplacer(
+	"*", "",
+	"<", "",
+	">", "",
+	"(", "",
+	")", "",
+	"'", "",
+	`"`, "",
+	`;`, "",
+	" ", "",
+	",", "",
+)
+
 func validateRedirectURL(uri string) string {
 	uri = validator.Replace(uri)
 

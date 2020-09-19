@@ -38,18 +38,6 @@ var (
 	mRead     *provider.SQLManager
 	mWrite    *provider.SQLManager
 	apiSecret = os.Getenv("API_SECRET")
-	validator = strings.NewReplacer(
-		"*", "",
-		"<", "",
-		">", "",
-		"(", "",
-		")", "",
-		"'", "",
-		`"`, "",
-		`;`, "",
-		" ", "",
-		",", "",
-	)
 )
 
 const (
