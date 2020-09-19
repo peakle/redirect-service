@@ -10,4 +10,4 @@ favicon.ico.fasthttp.gz
 cmd/env.go
 key.*
 certificate.*
-GeoLite2-C*
+Geo*
