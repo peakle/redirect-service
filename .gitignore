@@ -8,3 +8,6 @@ certificate.crt
 key.pem
 favicon.ico.fasthttp.gz
 cmd/env.go
+private.key
+request.csr
+GeoLite2-C*

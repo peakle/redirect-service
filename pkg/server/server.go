@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -9,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/schema"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/urfave/cli"
 	"github.com/valyala/fasthttp"
@@ -31,7 +29,7 @@ type VkDto struct {
 }
 
 var (
-	db        *geoip2.Reader
+	dbs       = make(map[string]*geoip2.Reader, 2)
 	mRead     *provider.SQLManager
 	mWrite    *provider.SQLManager
 	apiSecret = os.Getenv("API_SECRET")
@@ -62,8 +60,19 @@ func StartServer(c *cli.Context) {
 
 	fmt.Println("Start server...")
 
-	db, err = geoip2.Open("GeoIP2.mmdb")
+	db, err := geoip2.Open("GeoIP2City.mmdb")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "on StartServer: on open GeoIP2City: "+err.Error())
+	}
 	defer db.Close()
+	dbs["city"] = db
+
+	db, err = geoip2.Open("GeoIP2Country.mmdb")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "on StartServer: on open GeoIP2Country: "+err.Error())
+	}
+	defer db.Close()
+	dbs["country"] = db
 
 	projectDir := os.Getenv("PROJECT_DIR")
 
@@ -198,7 +207,7 @@ func handleStats(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	var r = make([]byte, 0, 200)
+	var r []byte
 	r, err = json.Marshal(stats)
 	if err != nil {
 		err = fmt.Errorf("on handleStats: on format json: %s, entryDto: %v", err.Error(), entryDto)
@@ -297,68 +306,5 @@ func handleRedirect(ctx *fasthttp.RequestCtx, path string) {
 
 	ctx.SetConnectionClose()
 
-	var city *geoip2.City
-
-	city, err = db.City(ctx.RemoteIP())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "on handleRedirect: on parse remote ip: "+err.Error())
-
-		return
-	}
-
-	var v string
-	var isSet bool
-	if v, isSet = city.City.Names["ru"]; isSet {
-		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), city.Country.Names["ru"]+" "+v, token)
-	} else if v, isSet = city.Country.Names["ru"]; isSet {
-		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), v, token)
-	} else {
-		mWrite.RecordStats(ctx.RemoteIP().String(), string(ctx.UserAgent()), undefinedCity, token)
-	}
-}
-
-func validateRedirectURL(uri string) string {
-	uri = validator.Replace(uri)
-
-	if strings.Contains(uri, "http://") || strings.Contains(uri, "https://") {
-		return uri
-	}
-
-	return fmt.Sprintf("http://%s", uri)
-}
-
-func verifyRequest(reqDto *VkDto) bool {
-	serverAuthKey := fmt.Sprintf("%x", md5.Sum([]byte(reqDto.APIID+"_"+reqDto.ViewerID+"_"+apiSecret)))
-
-	return reqDto.AuthKey == serverAuthKey
-}
-
-func verifyAPIRequest(vkDto *VkDto) bool {
-	if vkDto.ViewerID == "" {
-		vkDto.ViewerID = "0"
-		return true
-	}
-
-	return verifyRequest(vkDto)
-}
-
-func parseVKDTO(uriPath string) (*VkDto, error) {
-	uri, err := url.Parse(uriPath)
-	if err != nil {
-		err = fmt.Errorf("on verifyApiRequest: on url.Parse: " + err.Error())
-		return nil, err
-	}
-
-	var entryDto *VkDto
-
-	decoder := schema.NewDecoder()
-	decoder.IgnoreUnknownKeys(true)
-
-	err = decoder.Decode(entryDto, uri.Query())
-	if err != nil {
-		err = fmt.Errorf("on verifyApiRequest: on decode url params: " + err.Error())
-		return nil, err
-	}
-
-	return entryDto, nil
+	recordReq(ctx.RemoteIP(), ctx.UserAgent(), token)
 }
